@@ -13,10 +13,15 @@ struct SettingsView: View {
     @State private var showingRestoreAlert = false
     @State private var restoreMessage = ""
 
+    // Theme override — shares the "appTheme" @AppStorage key with HabitRApp
+    // so changes take effect app-wide immediately
+    @AppStorage("appTheme") private var appThemeRaw: String = AppTheme.dark.rawValue
+
     var body: some View {
         NavigationStack {
             Form {
                 notificationSection
+                appearanceSection
                 subscriptionSection
                 aboutSection
             }
@@ -53,6 +58,21 @@ struct SettingsView: View {
                 .onChange(of: reminderHour) { _, _ in scheduleReminder() }
                 .onChange(of: reminderMinute) { _, _ in scheduleReminder() }
             }
+        }
+    }
+
+    // MARK: - Appearance
+
+    private var appearanceSection: some View {
+        Section("Appearance") {
+            // Picker bound directly to the @AppStorage raw string
+            // Uses .menu style to match Apple's own Settings app convention
+            Picker("Theme", selection: $appThemeRaw) {
+                ForEach(AppTheme.allCases) { theme in
+                    Text(theme.label).tag(theme.rawValue)
+                }
+            }
+            .pickerStyle(.menu)
         }
     }
 

@@ -26,11 +26,17 @@ struct TodayView: View {
                     habitListView
                 }
             }
-            .navigationTitle("Today")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // Gear and "HabitR" sit together in a single leading toolbar item
+                // so the text appears immediately to the right of the cog
                 ToolbarItem(placement: .topBarLeading) {
-                    Button { showingSettings = true } label: {
-                        Image(systemName: "gearshape")
+                    HStack(spacing: 8) {
+                        Button { showingSettings = true } label: {
+                            Image(systemName: "gearshape")
+                        }
+                        Text("HabitR")
+                            .font(.headline)
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
