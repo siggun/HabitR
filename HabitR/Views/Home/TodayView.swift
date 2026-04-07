@@ -28,16 +28,17 @@ struct TodayView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Gear and "HabitR" sit together in a single leading toolbar item
-                // so the text appears immediately to the right of the cog
                 ToolbarItem(placement: .topBarLeading) {
-                    HStack(spacing: 8) {
-                        Button { showingSettings = true } label: {
-                            Image(systemName: "gearshape")
-                        }
-                        Text("HabitR")
-                            .font(.headline)
+                    Button { showingSettings = true } label: {
+                        Image(systemName: "gearshape")
                     }
+                }
+                // Separate ToolbarItem so SwiftUI renders the text reliably
+                // (mixing Text + Button in a single ToolbarItem HStack can clip the Text)
+                ToolbarItem(placement: .topBarLeading) {
+                    Text("HabitR")
+                        .font(.headline)
+                        .fontWeight(.bold)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { handleAddHabit() } label: {
