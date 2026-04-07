@@ -33,12 +33,17 @@ struct TodayView: View {
                         Image(systemName: "gearshape")
                     }
                 }
-                // Separate ToolbarItem so SwiftUI renders the text reliably
-                // (mixing Text + Button in a single ToolbarItem HStack can clip the Text)
-                ToolbarItem(placement: .topBarLeading) {
-                    Text("HabitR")
-                        .font(.headline)
-                        .fontWeight(.bold)
+                // Two-tone branded title centered in the nav bar
+                ToolbarItem(placement: .principal) {
+                    HStack(spacing: 0) {
+                        Text("Habit")
+                            .font(.title3)
+                            .fontWeight(.bold)
+                        Text("R")
+                            .font(.title3)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.accentColor)
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { handleAddHabit() } label: {
