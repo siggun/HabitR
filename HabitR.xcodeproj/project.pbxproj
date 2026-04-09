@@ -25,6 +25,8 @@
 		A1000010 /* StoreKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000010 /* StoreKitService.swift */; };
 		A1000011 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1000011 /* Assets.xcassets */; };
 		A1000012 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = B1000012 /* Products.storekit */; };
+		A1000013 /* HabitCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000013 /* HabitCardView.swift */; };
+		A1000014 /* MiniGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000014 /* MiniGridView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -46,6 +48,8 @@
 		B1000010 /* StoreKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitService.swift; sourceTree = "<group>"; };
 		B1000011 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B1000012 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
+		B1000013 /* HabitCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HabitCardView.swift; sourceTree = "<group>"; };
+		B1000014 /* MiniGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniGridView.swift; sourceTree = "<group>"; };
 		C1000001 /* HabitR.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HabitR.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -133,6 +137,8 @@
 				B1000006 /* TodayView.swift */,
 				B1000007 /* HabitRowView.swift */,
 				B1000008 /* AddEditHabitView.swift */,
+				B1000013 /* HabitCardView.swift */,
+				B1000014 /* MiniGridView.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -275,6 +281,8 @@
 				A100000E /* PaywallView.swift in Sources */,
 				A100000F /* NotificationService.swift in Sources */,
 				A1000010 /* StoreKitService.swift in Sources */,
+				A1000013 /* HabitCardView.swift in Sources */,
+				A1000014 /* MiniGridView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

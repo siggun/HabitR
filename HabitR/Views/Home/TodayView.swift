@@ -79,20 +79,31 @@ struct TodayView: View {
     }
 
     private var habitListView: some View {
-        List {
-            ForEach(habits) { habit in
-                HabitRowView(
-                    habit: habit,
-                    onToggle: { toggleHabit(habit) },
-                    onIncrement: { incrementHabit(habit) },
-                    onDecrement: { decrementHabit(habit) }
-                )
-                .contentShape(Rectangle())
-                .onTapGesture { selectedHabit = habit }
+        ScrollView {
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12)
+            ], spacing: 12) {
+                ForEach(habits) { habit in
+                    HabitCardView(
+                        habit: habit,
+                        onToggle: { toggleHabit(habit) },
+                        onIncrement: { incrementHabit(habit) },
+                        onDecrement: { decrementHabit(habit) }
+                    )
+                    .onTapGesture { selectedHabit = habit }
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            viewModel.deleteHabit(habit, context: modelContext)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                }
             }
-            .onDelete(perform: deleteHabits)
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
         }
-        .listStyle(.plain)
     }
 
     // MARK: - Actions
@@ -115,11 +126,5 @@ struct TodayView: View {
 
     private func decrementHabit(_ habit: Habit) {
         viewModel.decrementCounter(for: habit, on: Date(), context: modelContext)
-    }
-
-    private func deleteHabits(at offsets: IndexSet) {
-        for index in offsets {
-            viewModel.deleteHabit(habits[index], context: modelContext)
-        }
     }
 }
