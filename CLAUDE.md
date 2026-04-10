@@ -57,11 +57,27 @@ HabitR/Services/     → NotificationService, StoreKitService
 HabitR/Resources/    → Assets.xcassets, Products.storekit
 ```
 
+## Home Screen Design
+The home screen uses a **2-column card grid** layout (not a list). Each card shows:
+- Circular checkmark button → transforms to habit emoji when completed
+- Habit name + month/year label
+- Mini contribution grid preview (~6 weeks, solid on/off colors)
+- Delete via long-press context menu
+
+Components: `HabitCardView.swift`, `MiniGridView.swift` in `Views/Home/`
+
+## Theme & Appearance
+- **Blue accent color** — vibrant "Dodger Blue" (#3D78F5 light, #598CFF dark)
+- **Dark mode default** — app defaults to Dark via `AppTheme` enum in `HabitRApp.swift`
+- **Custom dark background** — slightly grey (#1A1B1D), not pitch black
+- **Two-tone branding** — "Habit" in default text color, "R" in accent blue
+- **Theme selector** in Settings → Appearance (system/light/dark via `@AppStorage`)
+- **Grid colors** — solid on/off, no intensity gradient
+
 ## Coding Conventions
 - **200 line file limit** — break up large files
 - **SF Symbols** for all icons (no custom images except app icon)
 - **System fonts only** — no custom fonts
-- **Green accent color** — used throughout for the habit/success theme
 - **Comments** — explain Swift/SwiftUI concepts for learning purposes
 - **Haptic feedback** — UIImpactFeedbackGenerator on check-off actions
 - **Animations** — subtle scale animation on completion toggle
@@ -93,7 +109,15 @@ HabitR/Resources/    → Assets.xcassets, Products.storekit
 - ❌ Apple Watch app
 - ❌ iPad-specific layouts
 
-## v1.1 Roadmap (Context Only)
+## v1.1 Changes Already Shipped
+- ✅ Dark mode default with theme selector (system/light/dark)
+- ✅ Two-tone "HabitR" branding in nav bar
+- ✅ Card grid home screen with mini contribution grids
+- ✅ Blue accent color (replaced green)
+- ✅ Slightly grey dark mode background (not pitch black)
+- ✅ Solid on/off grid colors (no intensity gradient)
+
+## v1.1 Roadmap (Remaining)
 - Apple App Analytics (free, no SDK)
 - Weekly/monthly stats graphs
 - iCloud sync via CloudKit

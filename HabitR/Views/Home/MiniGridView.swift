@@ -1,7 +1,7 @@
 import SwiftUI
 
 // Compact contribution grid shown inside habit cards on the home screen
-// Same algorithm as the full GridView but smaller and without labels or legend
+// Days of the week go left to right (Sun-Sat), weeks stack top to bottom
 struct MiniGridView: View {
     let habit: Habit
 
@@ -11,10 +11,10 @@ struct MiniGridView: View {
     private let cellSpacing: CGFloat = 2
 
     var body: some View {
-        // No ScrollView needed — 6 weeks fits within the card width
-        HStack(spacing: cellSpacing) {
+        // Each row is a week (Sun-Sat left to right), rows stack vertically
+        VStack(spacing: cellSpacing) {
             ForEach(gridWeeks(), id: \.self) { week in
-                VStack(spacing: cellSpacing) {
+                HStack(spacing: cellSpacing) {
                     ForEach(week, id: \.self) { day in
                         RoundedRectangle(cornerRadius: 1.5)
                             .fill(cellColor(for: day))
@@ -27,7 +27,7 @@ struct MiniGridView: View {
 
     // MARK: - Cell Color
 
-    /// Map completion count to color intensity — same logic as GridView
+    /// Solid on/off — completed = accent color, not completed = empty gray
     private func cellColor(for date: Date) -> Color {
         let calendar = Calendar.current
         let isBeforeCreation = date < calendar.startOfDay(for: habit.createdAt)
@@ -38,23 +38,12 @@ struct MiniGridView: View {
         }
 
         let count = habit.completionCount(for: date)
-        let target = max(habit.dailyTarget, 1)
-
-        switch count {
-        case 0:
-            return Color(.systemGray6)
-        case 1 where target == 1:
-            return Color.accentColor
-        default:
-            let ratio = min(Double(count) / Double(target), 1.5)
-            let opacity = 0.2 + (0.8 * min(ratio, 1.0))
-            return Color.accentColor.opacity(opacity)
-        }
+        return count > 0 ? Color.accentColor : Color(.systemGray6)
     }
 
     // MARK: - Grid Data
 
-    /// Generate week arrays — same algorithm as GridView.gridWeeks()
+    /// Generate week arrays — each inner array is one week (Sun-Sat)
     private func gridWeeks() -> [[Date]] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())

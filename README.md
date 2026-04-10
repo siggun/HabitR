@@ -1,6 +1,6 @@
 # HabitR
 
-A clean, minimal habit tracker for iOS. Track daily and weekly habits, visualize your progress with a GitHub-style contribution grid, maintain streaks, and build consistency — all with your data stored locally on your device. Free for up to 3 habits, with an optional subscription to unlock unlimited habits.
+A clean, minimal habit tracker for iOS. Track daily and weekly habits with a card-based home screen featuring mini contribution grids, maintain streaks, and build consistency — all with your data stored locally on your device. Free for up to 3 habits, with an optional subscription to unlock unlimited habits. Features a vibrant blue accent color, dark mode by default, and a two-tone "Habit**R**" brand identity.
 
 ## Screenshots
 
@@ -169,7 +169,7 @@ HabitR/
 │   ├── ViewModels/        # View models (only where needed)
 │   ├── Views/             # All SwiftUI views, organized by feature
 │   │   ├── Onboarding/    # First-launch onboarding flow
-│   │   ├── Home/          # Today's habits list
+│   │   ├── Home/          # Card grid home screen with mini grids
 │   │   ├── Detail/        # Habit detail with grid and calendar
 │   │   ├── Settings/      # App settings
 │   │   └── Paywall/       # Subscription paywall

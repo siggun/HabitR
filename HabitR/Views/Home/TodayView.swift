@@ -27,6 +27,8 @@ struct TodayView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color("AppBackground"), for: .navigationBar)
+            .background(Color("AppBackground"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { showingSettings = true } label: {
