@@ -15,6 +15,17 @@ struct CalendarView: View {
 
     var body: some View {
         VStack(spacing: 12) {
+            // Section title with hint
+            HStack {
+                Text("Calendar")
+                    .font(.headline)
+                Spacer()
+                Text("Tap a day to mark complete")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal)
+
             // Month navigation header
             monthHeader
 

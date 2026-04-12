@@ -1,7 +1,8 @@
 import SwiftUI
 
-// Detail view for a single habit — shows the GitHub-style grid and calendar
-// Accessed by tapping a habit in the TodayView list
+// Detail view for a single habit — shows the contribution grid at top,
+// calendar below for marking completions, and stats at the bottom.
+// Tap any day in the calendar to toggle completion.
 struct HabitDetailView: View {
     let habit: Habit
 
@@ -10,34 +11,18 @@ struct HabitDetailView: View {
     @StateObject private var viewModel = HabitListViewModel()
 
     @State private var showingEditSheet = false
-    @State private var selectedTab = 0
 
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Header with emoji, name, and streak
                 headerSection
-
-                // Segmented control for grid vs calendar view
-                Picker("View", selection: $selectedTab) {
-                    Text("Grid").tag(0)
-                    Text("Calendar").tag(1)
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-
-                // Show selected view
-                if selectedTab == 0 {
-                    GridView(habit: habit)
-                } else {
-                    CalendarView(habit: habit, viewModel: viewModel)
-                }
-
-                // Stats section
+                GridView(habit: habit)
+                CalendarView(habit: habit, viewModel: viewModel)
                 statsSection
             }
             .padding(.bottom, 20)
         }
+        .background(Color("AppBackground"))
         .navigationTitle(habit.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -108,7 +93,7 @@ struct HabitDetailView: View {
     }
 }
 
-// A small card showing a single stat — used in the detail view's stats section
+// A small card showing a single stat
 struct StatCard: View {
     let title: String
     let value: String
