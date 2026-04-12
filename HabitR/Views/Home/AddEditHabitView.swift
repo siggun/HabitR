@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 // Sheet for creating a new habit or editing an existing one
-// Includes emoji picker, name field, frequency, and completion mode options
+// Includes SF Symbol icon picker, name field, frequency, and completion mode options
 struct AddEditHabitView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -11,34 +11,27 @@ struct AddEditHabitView: View {
     var habitToEdit: Habit?
 
     @State private var name: String = ""
-    @State private var emoji: String = "⭐️"
+    @State private var emoji: String = "star.fill"
     @State private var frequency: HabitFrequency = .daily
     @State private var completionMode: CompletionMode = .toggle
     @State private var dailyTarget: Int = 1
-    @State private var showingEmojiPicker = false
-
-    // Common emojis for habits — organized by category
-    private let emojiOptions = [
-        "💪", "🏃", "🧘", "📖", "💧", "🥗", "😴", "🧠",
-        "✍️", "🎵", "🎨", "📱", "🚶", "🏋️", "🧹", "💊",
-        "🍎", "☀️", "🌙", "⭐️", "✅", "🎯", "🔥", "💡",
-        "🙏", "😊", "🌿", "🐕", "📝", "💰", "🎸", "🏊"
-    ]
+    @State private var showingIconPicker = false
 
     private var isEditing: Bool { habitToEdit != nil }
 
     var body: some View {
         NavigationStack {
             Form {
-                // Emoji and name section
+                // Icon and name section
                 Section {
                     HStack {
-                        // Tappable emoji button that opens the picker
-                        Button { showingEmojiPicker.toggle() } label: {
-                            Text(emoji)
-                                .font(.largeTitle)
+                        // Tappable icon button that opens the picker
+                        Button { showingIconPicker.toggle() } label: {
+                            Image(systemName: emoji)
+                                .font(.title2)
+                                .foregroundStyle(Color.accentColor)
                                 .frame(width: 50, height: 50)
-                                .background(Color(.systemGray6))
+                                .background(Color.accentColor.opacity(0.1))
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         .buttonStyle(.plain)
@@ -47,8 +40,8 @@ struct AddEditHabitView: View {
                             .font(.body)
                     }
 
-                    if showingEmojiPicker {
-                        emojiPickerGrid
+                    if showingIconPicker {
+                        iconPickerGrid
                     }
                 }
 
@@ -90,23 +83,33 @@ struct AddEditHabitView: View {
         }
     }
 
-    // MARK: - Emoji Picker
+    // MARK: - Icon Picker
 
-    private var emojiPickerGrid: some View {
-        // LazyVGrid creates a flexible grid layout
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 8), spacing: 8) {
-            ForEach(emojiOptions, id: \.self) { option in
-                Button {
-                    emoji = option
-                    showingEmojiPicker = false
-                } label: {
-                    Text(option)
-                        .font(.title2)
-                        .frame(width: 36, height: 36)
-                        .background(emoji == option ? Color.accentColor.opacity(0.2) : Color.clear)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
+    private var iconPickerGrid: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(HabitIcons.categories, id: \.name) { category in
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(category.name)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 8) {
+                        ForEach(category.icons, id: \.self) { icon in
+                            Button {
+                                emoji = icon
+                                showingIconPicker = false
+                            } label: {
+                                Image(systemName: icon)
+                                    .font(.body)
+                                    .frame(width: 36, height: 36)
+                                    .foregroundStyle(emoji == icon ? Color.accentColor : .primary)
+                                    .background(emoji == icon ? Color.accentColor.opacity(0.15) : Color(.systemGray6))
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
-                .buttonStyle(.plain)
             }
         }
         .padding(.vertical, 4)
@@ -128,14 +131,12 @@ struct AddEditHabitView: View {
         guard !trimmedName.isEmpty else { return }
 
         if let habit = habitToEdit {
-            // Update existing habit
             habit.name = trimmedName
             habit.emoji = emoji
             habit.frequency = frequency
             habit.completionMode = completionMode
             habit.dailyTarget = dailyTarget
         } else {
-            // Create new habit
             let habit = Habit(
                 name: trimmedName,
                 emoji: emoji,
@@ -149,4 +150,44 @@ struct AddEditHabitView: View {
         try? modelContext.save()
         dismiss()
     }
+}
+
+// MARK: - Icon Data
+
+/// Curated SF Symbols organized by habit category
+struct HabitIcons {
+    struct Category {
+        let name: String
+        let icons: [String]
+    }
+
+    static let categories: [Category] = [
+        Category(name: "Fitness", icons: [
+            "figure.run", "figure.walk", "dumbbell.fill",
+            "figure.yoga", "figure.hiking", "bicycle",
+        ]),
+        Category(name: "Health", icons: [
+            "heart.fill", "drop.fill", "pill.fill",
+            "bed.double.fill", "moon.zzz.fill", "brain.head.profile",
+        ]),
+        Category(name: "Productivity", icons: [
+            "book.fill", "pencil.line", "doc.text.fill",
+            "laptopcomputer", "clock.fill", "target",
+        ]),
+        Category(name: "Lifestyle", icons: [
+            "cup.and.saucer.fill", "leaf.fill", "fork.knife",
+            "cart.fill", "music.note", "paintbrush.fill",
+        ]),
+        Category(name: "Wellness", icons: [
+            "figure.mind.and.body", "sparkles", "sun.max.fill",
+            "moon.fill", "eye.fill", "hands.clap.fill",
+        ]),
+        Category(name: "General", icons: [
+            "star.fill", "checkmark.seal.fill", "flag.fill",
+            "bolt.fill", "flame.fill", "house.fill",
+        ]),
+    ]
+
+    /// Flat list of all icons for quick lookup
+    static let all: [String] = categories.flatMap(\.icons)
 }

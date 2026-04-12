@@ -25,9 +25,10 @@ struct HabitRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Emoji icon
-            Text(habit.emoji)
+            // Habit icon (SF Symbol)
+            Image(systemName: habit.emoji)
                 .font(.title2)
+                .foregroundStyle(Color.accentColor)
 
             // Habit name and streak
             VStack(alignment: .leading, spacing: 2) {

@@ -74,9 +74,10 @@ struct HabitCardView: View {
             handleCompletionTap()
         } label: {
             if isCompletedToday {
-                // Completed — show habit emoji in a colored circle
-                Text(habit.emoji)
-                    .font(.system(size: 14))
+                // Completed — show habit icon in a colored circle
+                Image(systemName: habit.emoji)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
                     .frame(width: 32, height: 32)
                     .background(Color.accentColor.opacity(0.15))
                     .clipShape(Circle())

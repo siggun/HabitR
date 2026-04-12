@@ -32,7 +32,7 @@ final class Habit {
 
     init(
         name: String,
-        emoji: String = "⭐️",
+        emoji: String = "star.fill",
         frequency: HabitFrequency = .daily,
         completionMode: CompletionMode = .toggle,
         dailyTarget: Int = 1,

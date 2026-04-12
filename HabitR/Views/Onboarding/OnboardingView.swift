@@ -8,7 +8,7 @@ struct OnboardingView: View {
 
     @State private var currentPage = 0
     @State private var habitName = ""
-    @State private var habitEmoji = "💪"
+    @State private var habitEmoji = "dumbbell.fill"
     @State private var reminderHour = 20 // 8 PM default
     @State private var reminderMinute = 0
     @State private var reminderEnabled = true
@@ -61,8 +61,9 @@ struct OnboardingView: View {
         VStack(spacing: 20) {
             Spacer()
 
-            Text(habitEmoji)
-                .font(.system(size: 60))
+            Image(systemName: habitEmoji)
+                .font(.system(size: 50))
+                .foregroundStyle(Color.accentColor)
 
             Text("Create Your First Habit")
                 .font(.title2)
@@ -72,17 +73,19 @@ struct OnboardingView: View {
                 .textFieldStyle(.roundedBorder)
                 .padding(.horizontal, 40)
 
-            // Quick emoji picker
+            // Quick icon picker — SF Symbols for common habits
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach(["💪", "🏃", "📖", "💧", "🧘", "😴", "🥗", "✍️"], id: \.self) { emoji in
+                    ForEach(["dumbbell.fill", "figure.run", "book.fill", "drop.fill",
+                             "figure.yoga", "bed.double.fill", "leaf.fill", "pencil.line"], id: \.self) { icon in
                         Button {
-                            habitEmoji = emoji
+                            habitEmoji = icon
                         } label: {
-                            Text(emoji)
-                                .font(.title)
-                                .padding(8)
-                                .background(habitEmoji == emoji ? Color.accentColor.opacity(0.2) : Color.clear)
+                            Image(systemName: icon)
+                                .font(.title3)
+                                .foregroundStyle(habitEmoji == icon ? Color.accentColor : .primary)
+                                .padding(10)
+                                .background(habitEmoji == icon ? Color.accentColor.opacity(0.15) : Color(.systemGray6))
                                 .clipShape(Circle())
                         }
                     }

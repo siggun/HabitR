@@ -61,8 +61,9 @@ struct HabitDetailView: View {
 
     private var headerSection: some View {
         VStack(spacing: 8) {
-            Text(habit.emoji)
-                .font(.system(size: 60))
+            Image(systemName: habit.emoji)
+                .font(.system(size: 50))
+                .foregroundStyle(Color.accentColor)
 
             Text(habit.name)
                 .font(.title2)
