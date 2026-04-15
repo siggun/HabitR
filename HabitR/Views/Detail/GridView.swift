@@ -1,24 +1,18 @@
 import SwiftUI
 
 // GitHub-style contribution grid — the signature visual of the app
-// Days of the week go left to right (Sun-Sat), weeks stack top to bottom.
-// Uses LazyVGrid with flexible columns so cells automatically scale to
-// fill the full width of whatever container GridView is placed in.
+// Days of the week go left to right (Sun-Sat), weeks stack top to bottom
+// Shows the last ~18 weeks of data
 struct GridView: View {
     let habit: Habit
 
     // Number of weeks to show (roughly 4 months)
     private let weeksToShow = 18
-    private let cellSpacing: CGFloat = 4
+    private let cellSize: CGFloat = 14
+    private let cellSpacing: CGFloat = 3
 
-    // Day-of-week labels shown in the header row
+    // Day-of-week labels shown above the grid
     private let dayLabels = ["S", "M", "T", "W", "T", "F", "S"]
-
-    // 7 flexible columns — one per day of the week. LazyVGrid splits the
-    // available width evenly across them, so cells always fill the screen.
-    private var columns: [GridItem] {
-        Array(repeating: GridItem(.flexible(), spacing: cellSpacing), count: 7)
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -26,9 +20,21 @@ struct GridView: View {
                 .font(.headline)
                 .padding(.horizontal)
 
-            VStack(alignment: .leading, spacing: cellSpacing) {
+            // NOTE: no inner ScrollView — HabitDetailView is already inside
+            // a ScrollView, so nesting another here would break scrolling.
+            VStack(alignment: .leading, spacing: 0) {
                 dayHeaderRow
-                contributionGrid
+
+                // Grid of day cells — each row is a week
+                VStack(spacing: cellSpacing) {
+                    ForEach(gridWeeks(), id: \.self) { week in
+                        HStack(spacing: cellSpacing) {
+                            ForEach(week, id: \.self) { day in
+                                gridCell(for: day)
+                            }
+                        }
+                    }
+                }
             }
             .padding(.horizontal)
         }
@@ -36,55 +42,44 @@ struct GridView: View {
 
     // MARK: - Day Header
 
-    /// 7 labels distributed evenly with the same spacing as the grid below,
-    /// so each label lines up with the column underneath it.
     private var dayHeaderRow: some View {
         HStack(spacing: cellSpacing) {
             ForEach(0..<7, id: \.self) { day in
                 Text(dayLabels[day])
-                    .font(.system(size: 11))
+                    .font(.system(size: 9))
                     .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
+                    .frame(width: cellSize, height: 16)
             }
         }
+        .padding(.bottom, 2)
     }
 
-    // MARK: - Grid
+    // MARK: - Grid Cell
 
-    private var contributionGrid: some View {
-        LazyVGrid(columns: columns, spacing: cellSpacing) {
-            ForEach(gridDays(), id: \.self) { day in
-                gridCell(for: day)
-            }
-        }
-    }
-
-    /// A single cell — square via aspectRatio so rows match column width
+    /// A single cell in the grid — solid color for completed, empty for not
     private func gridCell(for date: Date) -> some View {
         let count = habit.completionCount(for: date)
         let isBeforeCreation = date < Calendar.current.startOfDay(for: habit.createdAt)
         let isFuture = date > Calendar.current.startOfDay(for: Date())
 
-        return RoundedRectangle(cornerRadius: 4)
+        return RoundedRectangle(cornerRadius: 2)
             .fill(cellColor(count: count, isBeforeCreation: isBeforeCreation, isFuture: isFuture))
-            .aspectRatio(1, contentMode: .fit)
+            .frame(width: cellSize, height: cellSize)
     }
 
-    /// Solid on/off — completed = accent color, not completed = empty gray.
-    /// Before-creation and future days use a very faint fill so they recede
-    /// instead of looking like a distinct "unavailable" state.
+    /// Solid on/off — completed = accent color, not completed = empty gray
     private func cellColor(count: Int, isBeforeCreation: Bool, isFuture: Bool) -> Color {
         if isBeforeCreation || isFuture {
-            return Color(.systemGray6).opacity(0.4)
+            return Color(.systemGray5)
         }
         return count > 0 ? Color.accentColor : Color(.systemGray6)
     }
 
     // MARK: - Grid Data
 
-    /// Flat array of dates for the grid (oldest first), one per cell.
-    /// Starts at the Sunday `weeksToShow - 1` weeks ago, ends at this Saturday.
-    private func gridDays() -> [Date] {
+    /// Generate the grid data — an array of weeks, each containing 7 days
+    /// Each row is a week (Sun-Sat), arranged top to bottom (oldest first)
+    private func gridWeeks() -> [[Date]] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
@@ -94,19 +89,23 @@ struct GridView: View {
             byAdding: .day, value: -(weekday - 1), to: today
         ) else { return [] }
 
-        // Walk back weeksToShow weeks
+        // Go back weeksToShow weeks
         guard let gridStart = calendar.date(
             byAdding: .weekOfYear, value: -(weeksToShow - 1), to: startOfWeek
         ) else { return [] }
 
-        var days: [Date] = []
+        var weeks: [[Date]] = []
         var currentDate = gridStart
 
-        for _ in 0..<(weeksToShow * 7) {
-            days.append(currentDate)
-            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? currentDate
+        for _ in 0..<weeksToShow {
+            var week: [Date] = []
+            for _ in 0..<7 {
+                week.append(currentDate)
+                currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? currentDate
+            }
+            weeks.append(week)
         }
 
-        return days
+        return weeks
     }
 }

@@ -1,8 +1,9 @@
 import SwiftUI
 
 // Compact contribution grid shown inside habit cards on the home screen.
-// Uses LazyVGrid with flexible columns so cells automatically scale to
-// fill the full width of the card — no empty space on the right.
+// Days of the week go left to right (Sun-Sat), weeks stack top to bottom.
+// Cell size is computed from the card's actual width via GeometryReader
+// so the grid fills the full card width — no empty space on the right.
 struct MiniGridView: View {
     let habit: Habit
 
@@ -10,32 +11,39 @@ struct MiniGridView: View {
     private let weeksToShow = 6
     private let cellSpacing: CGFloat = 2
 
-    // 7 flexible columns — one per day of the week
-    private var columns: [GridItem] {
-        Array(repeating: GridItem(.flexible(), spacing: cellSpacing), count: 7)
-    }
-
     var body: some View {
-        LazyVGrid(columns: columns, spacing: cellSpacing) {
-            ForEach(gridDays(), id: \.self) { day in
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(cellColor(for: day))
-                    .aspectRatio(1, contentMode: .fit)
+        GeometryReader { geo in
+            // Divide the card width evenly across 7 day columns
+            let cellSize = max(0, (geo.size.width - cellSpacing * 6) / 7)
+
+            VStack(spacing: cellSpacing) {
+                ForEach(gridWeeks(), id: \.self) { week in
+                    HStack(spacing: cellSpacing) {
+                        ForEach(week, id: \.self) { day in
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(cellColor(for: day))
+                                .frame(width: cellSize, height: cellSize)
+                        }
+                    }
+                }
             }
+            .frame(width: geo.size.width, alignment: .topLeading)
         }
+        // Claim exactly the right aspect ratio so the GeometryReader has a
+        // concrete height. 7 columns × 6 rows ≈ 7:6 aspect ratio.
+        .aspectRatio(7.0 / 6.0, contentMode: .fit)
     }
 
     // MARK: - Cell Color
 
-    /// Solid on/off — completed = accent color, not completed = empty gray.
-    /// Before-creation and future days recede into the background.
+    /// Solid on/off — completed = accent color, not completed = empty gray
     private func cellColor(for date: Date) -> Color {
         let calendar = Calendar.current
         let isBeforeCreation = date < calendar.startOfDay(for: habit.createdAt)
         let isFuture = date > calendar.startOfDay(for: Date())
 
         if isBeforeCreation || isFuture {
-            return Color(.systemGray6).opacity(0.4)
+            return Color(.systemGray5)
         }
 
         let count = habit.completionCount(for: date)
@@ -44,8 +52,8 @@ struct MiniGridView: View {
 
     // MARK: - Grid Data
 
-    /// Flat array of dates for the grid (oldest first), one per cell
-    private func gridDays() -> [Date] {
+    /// Generate week arrays — each inner array is one week (Sun-Sat)
+    private func gridWeeks() -> [[Date]] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
@@ -58,14 +66,18 @@ struct MiniGridView: View {
             byAdding: .weekOfYear, value: -(weeksToShow - 1), to: startOfWeek
         ) else { return [] }
 
-        var days: [Date] = []
+        var weeks: [[Date]] = []
         var currentDate = gridStart
 
-        for _ in 0..<(weeksToShow * 7) {
-            days.append(currentDate)
-            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? currentDate
+        for _ in 0..<weeksToShow {
+            var week: [Date] = []
+            for _ in 0..<7 {
+                week.append(currentDate)
+                currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? currentDate
+            }
+            weeks.append(week)
         }
 
-        return days
+        return weeks
     }
 }
