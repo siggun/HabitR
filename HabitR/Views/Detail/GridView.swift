@@ -33,8 +33,10 @@ extension Color {
 /// distinction between missed / future / pre-creation — see `Color.gridMuted` doc.
 ///
 /// ## Scroll behavior
-/// `ScrollViewReader.scrollTo(_:anchor:)` is fired in `.onAppear` to pin the most recent week
-/// to the trailing edge. Without this, horizontal ScrollViews default to leading.
+/// `.defaultScrollAnchor(.trailing)` (iOS 17+) pins the initial scroll position to the trailing
+/// edge so "today" sits flush with the right side of the card on first open. This is declarative
+/// — no `ScrollViewReader` / `scrollTo` / `onAppear` plumbing — which avoids the timing race
+/// where `onAppear` fires before layout is final and leaves a trailing gap.
 struct GridView: View {
     let habit: Habit
 
@@ -48,28 +50,19 @@ struct GridView: View {
     /// Width reserved for the day-of-week label gutter on the left side.
     private let dayLabelWidth: CGFloat = 28
 
-    /// Sticky scroll anchor id. Used to scroll the latest week into view on appear.
-    private let latestWeekID = "latest-week"
-
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .top, spacing: 6) {
-                    dayLabelsColumn
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(alignment: .top, spacing: 6) {
+                dayLabelsColumn
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        monthHeaderRow
-                        gridRows
-                    }
+                VStack(alignment: .leading, spacing: 4) {
+                    monthHeaderRow
+                    gridRows
                 }
-                .padding(.vertical, 4)
             }
-            .onAppear {
-                // [Interview] `.trailing` aligns the latest column to the right edge of the
-                // scroll viewport — i.e. "today" sits at the far right on first open.
-                proxy.scrollTo(latestWeekID, anchor: .trailing)
-            }
+            .padding(.vertical, 4)
         }
+        .defaultScrollAnchor(.trailing)
     }
 
     // MARK: - Day Labels
@@ -144,34 +137,18 @@ struct GridView: View {
     // MARK: - Grid Body
 
     /// Seven rows (Mon→Sun), each row spanning `weeksToShow` week columns.
-    /// We tag the top-right cell with `latestWeekID` so the ScrollViewReader can find it.
     private var gridRows: some View {
         let weeks = gridWeeks()
         return VStack(spacing: cellSpacing) {
             ForEach(0..<7, id: \.self) { dayIndex in
                 HStack(spacing: cellSpacing) {
                     ForEach(weeks.indices, id: \.self) { weekIdx in
-                        cell(
-                            for: weeks[weekIdx][dayIndex],
-                            isAnchor: weekIdx == weeks.count - 1 && dayIndex == 0
-                        )
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(cellColor(for: weeks[weekIdx][dayIndex]))
+                            .frame(width: cellSize, height: cellSize)
                     }
                 }
             }
-        }
-    }
-
-    /// Single grid cell. The trailing-most cell is tagged with the scroll-anchor id; tagging
-    /// every cell would be wasteful and could confuse ScrollViewReader's match.
-    @ViewBuilder
-    private func cell(for date: Date, isAnchor: Bool) -> some View {
-        let rect = RoundedRectangle(cornerRadius: 3)
-            .fill(cellColor(for: date))
-            .frame(width: cellSize, height: cellSize)
-        if isAnchor {
-            rect.id(latestWeekID)
-        } else {
-            rect
         }
     }
 
