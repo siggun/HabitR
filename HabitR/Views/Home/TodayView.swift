@@ -1,12 +1,28 @@
 import SwiftUI
 import SwiftData
 
-// The main screen — shows today's habits as a list with check-off controls
-// This is the first screen users see after onboarding
+/// Root of the authenticated app surface — the home screen that users land on after onboarding.
+///
+/// Responsibilities:
+/// - Fetch all habits from SwiftData via `@Query` and render them in a 2-column grid of cards.
+/// - Coordinate the three modal sheets: Add Habit, Paywall, and Settings.
+/// - Gate new-habit creation through the free-tier check before presenting the add sheet.
+/// - Push to `HabitDetailView` when a card is tapped.
+///
+/// ## Data flow
+/// `@Query` is SwiftData's live-fetching property wrapper. It re-fires the view's `body` whenever
+/// the underlying store changes — this is why we never have to call `setNeedsLayout` or manually
+/// refresh after `HabitListViewModel` mutates a record.
+///
+/// `HabitListViewModel` is stateless, so `@StateObject` is a slight overkill here (`@State` with
+/// a plain struct would work), but using `@StateObject` keeps the door open for adding
+/// `@Published` state later without a wider refactor.
 struct TodayView: View {
-    // @Query automatically fetches all Habit objects from SwiftData
-    // and updates the view when data changes
+    /// Sorted by `sortOrder` so the UI matches user-reorderings once those are introduced.
     @Query(sort: \Habit.sortOrder) private var habits: [Habit]
+
+    /// Context handed down by the app's `.modelContainer` modifier. Passed into the VM for
+    /// each mutating call.
     @Environment(\.modelContext) private var modelContext
 
     @StateObject private var viewModel = HabitListViewModel()
@@ -15,6 +31,9 @@ struct TodayView: View {
     @State private var showingAddHabit = false
     @State private var showingPaywall = false
     @State private var showingSettings = false
+
+    /// Non-nil when the user has tapped a card. Binding to `.sheet(item:)` ensures the sheet
+    /// is dismissed (and this set back to `nil`) automatically when the user swipes down.
     @State private var selectedHabit: Habit?
 
     var body: some View {
@@ -27,6 +46,8 @@ struct TodayView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            // [Interview] Matching the toolbar background to the app background prevents the
+            // default translucent material from muddying our custom dark grey (#1A1B1D).
             .toolbarBackground(Color("AppBackground"), for: .navigationBar)
             .background(Color("AppBackground"))
             .toolbar {
@@ -35,7 +56,9 @@ struct TodayView: View {
                         Image(systemName: "gearshape")
                     }
                 }
-                // Two-tone branded title centered in the nav bar
+                // [Interview] Two-tone branded title: "Habit" in default foreground, "R" in the
+                // accent color. Using an HStack with `spacing: 0` so the two Texts read as one
+                // word visually while remaining separately styleable.
                 ToolbarItem(placement: .principal) {
                     HStack(spacing: 0) {
                         Text("Habit")
@@ -53,25 +76,22 @@ struct TodayView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingAddHabit) {
-                AddEditHabitView()
-            }
-            .sheet(isPresented: $showingPaywall) {
-                PaywallView()
-            }
-            .sheet(isPresented: $showingSettings) {
-                SettingsView()
-            }
+            .sheet(isPresented: $showingAddHabit) { AddEditHabitView() }
+            .sheet(isPresented: $showingPaywall) { PaywallView() }
+            .sheet(isPresented: $showingSettings) { SettingsView() }
             .sheet(item: $selectedHabit) { habit in
-                NavigationStack {
-                    HabitDetailView(habit: habit)
-                }
+                // [Interview] No NavigationStack — the redesigned detail sheet renders its own
+                // header (icon + title + close X) and doesn't need a system nav bar.
+                HabitDetailView(habit: habit)
             }
         }
     }
 
     // MARK: - Subviews
 
+    /// First-run / empty-state placeholder. `ContentUnavailableView` is Apple's iOS 17 API for
+    /// standardized empty states — we prefer it over a hand-rolled VStack for consistency with
+    /// other system apps.
     private var emptyStateView: some View {
         ContentUnavailableView {
             Label("No Habits Yet", systemImage: "checkmark.circle.badge.plus")
@@ -80,6 +100,9 @@ struct TodayView: View {
         }
     }
 
+    /// The card grid. `LazyVGrid` renders rows on demand as the user scrolls, which keeps
+    /// memory flat for users with many habits (relevant for subscribers only — free tier caps
+    /// at 3, but we don't want to refactor this once someone subscribes).
     private var habitListView: some View {
         ScrollView {
             LazyVGrid(columns: [
@@ -93,8 +116,12 @@ struct TodayView: View {
                         onIncrement: { incrementHabit(habit) },
                         onDecrement: { decrementHabit(habit) }
                     )
+                    // Tap the card body to drill in; the completion button intercepts its own
+                    // taps via its Button, so they don't bubble up to this gesture.
                     .onTapGesture { selectedHabit = habit }
                     .contextMenu {
+                        // [Interview] Destructive role tints the button red and gives the
+                        // system the right affordance for haptic/preview behavior.
                         Button(role: .destructive) {
                             viewModel.deleteHabit(habit, context: modelContext)
                         } label: {
@@ -110,6 +137,11 @@ struct TodayView: View {
 
     // MARK: - Actions
 
+    /// Decide whether "+" should show the create sheet or redirect to the paywall.
+    ///
+    /// Centralizing this in one method (rather than inlining the ternary) makes the monetization
+    /// gate trivially testable and ensures both the button and any future shortcuts (Siri, etc.)
+    /// hit the same check.
     private func handleAddHabit() {
         if viewModel.canAddHabit(currentCount: habits.count, isSubscribed: storeKit.isSubscribed) {
             showingAddHabit = true

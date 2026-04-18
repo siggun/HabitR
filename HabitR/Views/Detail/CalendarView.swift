@@ -1,194 +1,208 @@
 import SwiftUI
 
-// Month calendar view with tappable days for editing past completions
-// Users can tap any past day to add or remove a completion
+/// Month calendar surface for editing past completions.
+///
+/// Visual treatment matches the redesigned detail sheet:
+/// - **Mon-first** weekday headers, matching the contribution grid above.
+/// - **Completed day** → dark-green rounded pill behind the number, light-green dot below.
+/// - **Today** → white circular outline (no fill) so it reads as "current" without competing
+///   with the green completion pill if today happens to also be completed.
+/// - **Adjacent-month days** rendered dim so the active month visually dominates.
+/// - **Month picker pill + nav chevrons** docked at the bottom of the calendar.
+///
+/// Tapping a day toggles its completion (toggle habits) or flips between 0 and `dailyTarget`
+/// (counter habits — calendar editing is a coarse two-state action by design).
 struct CalendarView: View {
     let habit: Habit
     let viewModel: HabitListViewModel
 
     @Environment(\.modelContext) private var modelContext
 
+    /// The month currently displayed in the grid. Driven by the bottom prev/next chevrons.
     @State private var displayedMonth = Date()
 
     private let calendar = Calendar.current
-    private let dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+    /// Mon-first weekday header order. Index aligns with the grid columns below.
+    private let dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
     var body: some View {
-        VStack(spacing: 12) {
-            // Section title with hint
-            HStack {
-                Text("Calendar")
-                    .font(.headline)
-                Spacer()
-                Text("Tap a day to mark complete")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal)
-
-            // Month navigation header
-            monthHeader
-
-            // Day-of-week labels
+        VStack(spacing: 14) {
             dayOfWeekRow
-
-            // Calendar grid
             calendarGrid
+            bottomBar
         }
-        .padding(.horizontal)
+        .padding(.horizontal, 4)
     }
 
-    // MARK: - Month Header
-
-    private var monthHeader: some View {
-        HStack {
-            Button {
-                moveMonth(by: -1)
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.body.weight(.semibold))
-            }
-
-            Spacer()
-
-            Text(monthYearString)
-                .font(.headline)
-
-            Spacer()
-
-            Button {
-                moveMonth(by: 1)
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.body.weight(.semibold))
-            }
-            // Disable forward navigation past current month
-            .disabled(isCurrentMonth)
-        }
-        .padding(.horizontal, 8)
-    }
-
-    // MARK: - Day Labels
+    // MARK: - Day-of-week Header
 
     private var dayOfWeekRow: some View {
         HStack(spacing: 0) {
             ForEach(dayLabels, id: \.self) { label in
                 Text(label)
-                    .font(.caption2)
-                    .fontWeight(.medium)
+                    .font(.system(size: 13, weight: .regular))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
             }
         }
     }
 
-    // MARK: - Calendar Grid
+    // MARK: - Day Grid
 
+    /// 6-row × 7-col fixed grid. Showing leading/trailing days from adjacent months keeps the
+    /// row count constant, which prevents the bottom bar from jumping when paging months.
     private var calendarGrid: some View {
         let days = calendarDays()
-
-        return LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
-            ForEach(days, id: \.self) { day in
-                if let date = day {
-                    dayCell(for: date)
-                } else {
-                    // Empty cell for padding at start/end of month
-                    Color.clear
-                        .frame(height: 36)
-                }
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 6) {
+            ForEach(days, id: \.self) { date in
+                dayCell(for: date)
             }
         }
     }
 
-    /// A single day cell — shows the day number with completion indicator
+    /// Single day cell. Composition (back-to-front):
+    /// 1. Background pill — dark green when completed.
+    /// 2. Today outline — white circle stroke when the date is today.
+    /// 3. Number — primary or dim depending on whether the date is in the displayed month.
+    /// 4. Completion dot — light green pip below the number when completed.
+    @ViewBuilder
     private func dayCell(for date: Date) -> some View {
+        let isInDisplayedMonth = calendar.isDate(date, equalTo: displayedMonth, toGranularity: .month)
         let isToday = calendar.isDateInToday(date)
         let isFuture = date > calendar.startOfDay(for: Date())
         let isBeforeCreation = date < calendar.startOfDay(for: habit.createdAt)
-        let count = habit.completionCount(for: date)
         let isCompleted = habit.isCompleted(for: date)
 
-        return Button {
+        Button {
             handleDayTap(date: date)
         } label: {
-            VStack(spacing: 2) {
-                Text("\(calendar.component(.day, from: date))")
-                    .font(.subheadline)
-                    .fontWeight(isToday ? .bold : .regular)
-                    .foregroundStyle(isFuture || isBeforeCreation ? .tertiary : .primary)
+            ZStack {
+                // [Interview] Background pill. Stays slightly inset from the cell bounds so the
+                // grid feels airy rather than packed wall-to-wall with green when streaks happen.
+                if isCompleted {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.gridMuted)
+                        .padding(2)
+                }
 
-                // Completion indicator dot/count
-                if count > 0 {
-                    if habit.completionMode == .counter {
-                        Text("\(count)")
-                            .font(.system(size: 8))
-                            .foregroundStyle(Color.accentColor)
-                    } else {
-                        Circle()
-                            .fill(Color.accentColor)
-                            .frame(width: 6, height: 6)
-                    }
-                } else {
+                // Today indicator — drawn over the pill so it remains visible if today is done.
+                // Using a Circle (not a RoundedRectangle) matches the perfect-circle outline in
+                // the design reference.
+                if isToday {
                     Circle()
-                        .fill(Color.clear)
-                        .frame(width: 6, height: 6)
+                        .stroke(Color.white, lineWidth: 1.5)
+                        .frame(width: 36, height: 36)
+                }
+
+                VStack(spacing: 2) {
+                    Text("\(calendar.component(.day, from: date))")
+                        .font(.system(size: 16, weight: isToday ? .bold : .regular))
+                        .foregroundStyle(isInDisplayedMonth ? Color.primary : Color.secondary.opacity(0.6))
+
+                    // Completion dot — light green pip. Always reserve the space so vertical
+                    // centering of the number doesn't shift between completed / not.
+                    Circle()
+                        .fill(isCompleted ? Color.gridAccent : Color.clear)
+                        .frame(width: 4, height: 4)
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 36)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isCompleted ? Color.accentColor.opacity(0.15) : Color.clear)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(isToday ? Color.accentColor : Color.clear, lineWidth: 1.5)
-            )
+            .frame(height: 52)
         }
         .buttonStyle(.plain)
         .disabled(isFuture || isBeforeCreation)
     }
 
+    // MARK: - Bottom Bar
+
+    /// "Apr 2026" pill on the left, prev/next chevrons on the right.
+    /// Mirrors the layout in the design reference.
+    private var bottomBar: some View {
+        HStack {
+            HStack(spacing: 6) {
+                Image(systemName: "calendar")
+                    .font(.system(size: 13))
+                Text(monthYearString)
+                    .font(.system(size: 14, weight: .medium))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Color.white.opacity(0.05))
+            .clipShape(Capsule())
+
+            Spacer()
+
+            HStack(spacing: 8) {
+                navButton(systemName: "chevron.left", label: "Previous month") { moveMonth(by: -1) }
+                navButton(systemName: "chevron.right", label: "Next month") { moveMonth(by: 1) }
+                    // Don't allow navigating past the current month — there's no future data.
+                    .disabled(isCurrentMonth)
+                    .opacity(isCurrentMonth ? 0.4 : 1.0)
+            }
+        }
+        .padding(.top, 4)
+    }
+
+    private func navButton(systemName: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.primary)
+                .frame(width: 36, height: 36)
+                .background(Color.white.opacity(0.05))
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+
     // MARK: - Actions
 
     private func handleDayTap(date: Date) {
-        let impact = UIImpactFeedbackGenerator(style: .light)
-        impact.impactOccurred()
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
 
         if habit.completionMode == .toggle {
             viewModel.toggleCompletion(for: habit, on: date, context: modelContext)
         } else {
-            // For counter mode in calendar, toggle between 0 and target
+            // Counter mode: calendar editing is a coarse 0 ↔ target toggle. Fine-grained count
+            // editing happens via the home card's increment/decrement controls.
             let current = habit.completionCount(for: date)
-            if current > 0 {
-                viewModel.setCompletion(for: habit, on: date, count: 0, context: modelContext)
-            } else {
-                viewModel.setCompletion(for: habit, on: date, count: habit.dailyTarget, context: modelContext)
-            }
+            let newCount = current > 0 ? 0 : habit.dailyTarget
+            viewModel.setCompletion(for: habit, on: date, count: newCount, context: modelContext)
         }
     }
 
     // MARK: - Helpers
 
-    /// Generate array of optional dates for the calendar grid
-    /// nil values represent empty cells before the first day or after the last day
-    private func calendarDays() -> [Date?] {
-        guard let range = calendar.range(of: .day, in: .month, for: displayedMonth),
-              let firstOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonth))
+    /// Build a fixed 6×7 = 42 cell window centered on `displayedMonth`. Includes leading days
+    /// from the previous month and trailing days from the next month so every grid is the same
+    /// height regardless of where the 1st falls.
+    private func calendarDays() -> [Date] {
+        guard
+            let firstOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonth))
         else { return [] }
 
-        let firstWeekday = calendar.component(.weekday, from: firstOfMonth)
-        let leadingEmpty = firstWeekday - 1
+        // [Interview] We want Monday as column 0. `.weekday` returns 1=Sun … 7=Sat, so the
+        // Monday-first index is `(weekday + 5) % 7`: Sun→6, Mon→0, Tue→1, …, Sat→5.
+        let weekday = calendar.component(.weekday, from: firstOfMonth)
+        let leadingDays = (weekday + 5) % 7
 
-        var days: [Date?] = Array(repeating: nil, count: leadingEmpty)
-
-        for day in range {
-            if let date = calendar.date(byAdding: .day, value: day - 1, to: firstOfMonth) {
-                days.append(date)
-            }
+        guard let gridStart = calendar.date(byAdding: .day, value: -leadingDays, to: firstOfMonth) else {
+            return []
         }
 
-        return days
+        var dates: [Date] = []
+        var cursor = gridStart
+        for _ in 0..<42 {
+            dates.append(cursor)
+            guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else {
+                assertionFailure("Calendar failed to advance date")
+                return dates
+            }
+            cursor = next
+        }
+        return dates
     }
 
     private func moveMonth(by value: Int) {
@@ -199,7 +213,7 @@ struct CalendarView: View {
 
     private var monthYearString: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy"
+        formatter.dateFormat = "MMM yyyy"
         return formatter.string(from: displayedMonth)
     }
 
