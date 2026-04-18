@@ -82,15 +82,17 @@ struct CalendarView: View {
                 // grid feels airy rather than packed wall-to-wall with green when streaks happen.
                 if isCompleted {
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.gridEmpty)
+                        .fill(Color.gridMuted)
                         .padding(2)
                 }
 
                 // Today indicator — drawn over the pill so it remains visible if today is done.
+                // Using a Circle (not a RoundedRectangle) matches the perfect-circle outline in
+                // the design reference.
                 if isToday {
-                    RoundedRectangle(cornerRadius: 16)
+                    Circle()
                         .stroke(Color.white, lineWidth: 1.5)
-                        .padding(6)
+                        .frame(width: 36, height: 36)
                 }
 
                 VStack(spacing: 2) {
@@ -101,7 +103,7 @@ struct CalendarView: View {
                     // Completion dot — light green pip. Always reserve the space so vertical
                     // centering of the number doesn't shift between completed / not.
                     Circle()
-                        .fill(isCompleted ? Color.gridFilled : Color.clear)
+                        .fill(isCompleted ? Color.gridAccent : Color.clear)
                         .frame(width: 4, height: 4)
                 }
             }
@@ -132,8 +134,8 @@ struct CalendarView: View {
             Spacer()
 
             HStack(spacing: 8) {
-                navButton(systemName: "chevron.left") { moveMonth(by: -1) }
-                navButton(systemName: "chevron.right") { moveMonth(by: 1) }
+                navButton(systemName: "chevron.left", label: "Previous month") { moveMonth(by: -1) }
+                navButton(systemName: "chevron.right", label: "Next month") { moveMonth(by: 1) }
                     // Don't allow navigating past the current month — there's no future data.
                     .disabled(isCurrentMonth)
                     .opacity(isCurrentMonth ? 0.4 : 1.0)
@@ -142,7 +144,7 @@ struct CalendarView: View {
         .padding(.top, 4)
     }
 
-    private func navButton(systemName: String, action: @escaping () -> Void) -> some View {
+    private func navButton(systemName: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 14, weight: .semibold))
@@ -152,6 +154,7 @@ struct CalendarView: View {
                 .clipShape(Circle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 
     // MARK: - Actions
@@ -193,7 +196,11 @@ struct CalendarView: View {
         var cursor = gridStart
         for _ in 0..<42 {
             dates.append(cursor)
-            cursor = calendar.date(byAdding: .day, value: 1, to: cursor) ?? cursor
+            guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else {
+                assertionFailure("Calendar failed to advance date")
+                return dates
+            }
+            cursor = next
         }
         return dates
     }

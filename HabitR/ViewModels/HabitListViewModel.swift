@@ -1,6 +1,9 @@
 import Foundation
+import os
 import SwiftData
 import SwiftUI
+
+private let log = Logger(subsystem: "HabitR", category: "HabitListViewModel")
 
 /// View model backing the home screen (`TodayView`) and the detail/calendar edit paths.
 ///
@@ -144,7 +147,7 @@ final class HabitListViewModel: ObservableObject {
         do {
             try context.save()
         } catch {
-            print("Failed to save context: \(error)")
+            log.error("Failed to save context: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

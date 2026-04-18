@@ -1,5 +1,10 @@
 import Foundation
+import os
 import StoreKit
+
+/// Process-wide logger for StoreKit flows. `subsystem` is the reverse-DNS-style bundle id;
+/// `category` groups StoreKit events together in Console.app.
+private let log = Logger(subsystem: "HabitR", category: "StoreKitService")
 
 /// Centralized coordinator for all in-app purchase (IAP) concerns.
 ///
@@ -78,7 +83,7 @@ final class StoreKitService: ObservableObject {
             products = try await Product.products(for: productIDs)
             products.sort { $0.price < $1.price }
         } catch {
-            print("Failed to load products: \(error)")
+            log.error("Failed to load products: \(error.localizedDescription, privacy: .public)")
         }
     }
 

@@ -2,13 +2,15 @@ import SwiftUI
 
 /// Compact contribution grid rendered inside each `HabitCardView` on the home screen.
 ///
-/// Layout: 7 columns (Sun→Sat), `weeksToShow` rows (oldest week on top). Cell size adapts to the
+/// Layout: 7 columns (Mon→Sun), `weeksToShow` rows (oldest week on top). Cell size adapts to the
 /// card's available width via `GeometryReader` so the grid fills its parent edge to edge.
+/// Week order matches the detail-view `GridView` and the bottom `CalendarView` — every
+/// time-based view in the app agrees on Monday as the start of the week.
 ///
 /// ## Color policy (single-tone empty)
 /// Every cell is one of two colors:
-/// - `Color.gridFilled` — the day has a logged completion.
-/// - `Color.gridEmpty`  — every other state (missed, future, pre-creation).
+/// - `Color.gridAccent` — the day has a logged completion.
+/// - `Color.gridMuted`  — every other state (missed, future, pre-creation).
 ///
 /// Past versions of this view tried to distinguish "missed in-range" from "future / pre-creation"
 /// using `systemGray6` vs `systemGray5`. On dark backgrounds, `systemGray6` collapsed into the
@@ -53,22 +55,23 @@ struct MiniGridView: View {
     /// Two-state coloring: filled on completion, empty otherwise. Future / pre-creation /
     /// missed days all render identically — we don't punish a missed day visually.
     private func cellColor(for date: Date) -> Color {
-        habit.completionCount(for: date) > 0 ? .gridFilled : .gridEmpty
+        habit.completionCount(for: date) > 0 ? .gridAccent : .gridMuted
     }
 
     // MARK: - Grid Data
 
     /// Build a `[weeks][days]` matrix of dates for the window this grid displays.
-    /// Each row is a week (Sun→Sat), oldest week first.
+    /// Each row is a week (Mon→Sun), oldest week first.
     private func gridWeeks() -> [[Date]] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
-        // [Interview] `.weekday` is 1-indexed with Sunday = 1. Subtracting `weekday - 1` lands
-        // us on the Sunday of the current week regardless of what day it is today.
+        // [Interview] `.weekday` returns 1=Sun … 7=Sat. To land on the Monday of this week we
+        // apply offset Sun→-6, Mon→0, Tue→-1, …, Sat→-5 — same trick used by `GridView`.
         let weekday = calendar.component(.weekday, from: today)
+        let mondayOffset = (weekday == 1) ? -6 : -(weekday - 2)
         guard let startOfWeek = calendar.date(
-            byAdding: .day, value: -(weekday - 1), to: today
+            byAdding: .day, value: mondayOffset, to: today
         ) else { return [] }
 
         guard let gridStart = calendar.date(
@@ -82,7 +85,14 @@ struct MiniGridView: View {
             var week: [Date] = []
             for _ in 0..<7 {
                 week.append(currentDate)
-                currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? currentDate
+                // [Interview] If Calendar arithmetic ever fails we break rather than reuse the
+                // same date (which would produce a stuck cursor and an infinite-ish loop of
+                // identical cells). An assertion fires in debug builds to surface the bug.
+                guard let next = calendar.date(byAdding: .day, value: 1, to: currentDate) else {
+                    assertionFailure("Calendar failed to advance date")
+                    return weeks
+                }
+                currentDate = next
             }
             weeks.append(week)
         }

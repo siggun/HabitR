@@ -1,5 +1,8 @@
 import Foundation
+import os
 import UserNotifications
+
+private let log = Logger(subsystem: "HabitR", category: "NotificationService")
 
 /// Thin wrapper around `UNUserNotificationCenter` for scheduling the app's daily habit reminder.
 ///
@@ -43,7 +46,7 @@ final class NotificationService {
                 .requestAuthorization(options: [.alert, .badge, .sound])
             return granted
         } catch {
-            print("Notification permission error: \(error)")
+            log.error("Notification permission error: \(error.localizedDescription, privacy: .public)")
             return false
         }
     }
@@ -95,7 +98,7 @@ final class NotificationService {
 
         UNUserNotificationCenter.current().add(request) { error in
             if let error {
-                print("Failed to schedule notification: \(error)")
+                log.error("Failed to schedule notification: \(error.localizedDescription, privacy: .public)")
             }
         }
     }

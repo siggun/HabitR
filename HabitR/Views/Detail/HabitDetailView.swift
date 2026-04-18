@@ -29,7 +29,12 @@ struct HabitDetailView: View {
     @State private var showingEditSheet = false
 
     var body: some View {
-        VStack(spacing: 0) {
+        // [Interview] Compute the streak once per body evaluation. `currentStreak()` walks
+        // backwards through completions, so caching avoids re-doing that work for every subview
+        // that reads it (currently just the action row, but cheap insurance against future reads).
+        let streak = habit.currentStreak()
+
+        return VStack(spacing: 0) {
             header
 
             ScrollView {
@@ -37,7 +42,7 @@ struct HabitDetailView: View {
                     GridView(habit: habit)
                         .padding(.top, 4)
 
-                    actionRow
+                    actionRow(streak: streak)
 
                     Divider()
                         .background(Color.white.opacity(0.06))
@@ -87,6 +92,7 @@ struct HabitDetailView: View {
                     .clipShape(Circle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Close")
         }
         .padding(.horizontal, 16)
         .padding(.top, 18)
@@ -96,7 +102,7 @@ struct HabitDetailView: View {
     // MARK: - Action Row
 
     /// Row beneath the contribution grid: streak-goal pill, streak counter, edit, gear.
-    private var actionRow: some View {
+    private func actionRow(streak: Int) -> some View {
         HStack(spacing: 10) {
             // [Interview] Static — Habit doesn't track a goal target. When goals ship, swap
             // this string for the user's configured target ("30 day goal", etc.).
@@ -111,8 +117,8 @@ struct HabitDetailView: View {
             HStack(spacing: 4) {
                 Image(systemName: "flame.fill")
                     .font(.system(size: 13))
-                    .foregroundStyle(Color.gridFilled)
-                Text("\(habit.currentStreak())")
+                    .foregroundStyle(Color.gridAccent)
+                Text("\(streak)")
                     .font(.system(size: 14, weight: .medium))
                     .monospacedDigit()
             }
@@ -124,15 +130,19 @@ struct HabitDetailView: View {
 
             Spacer()
 
-            iconButton(systemName: "square.and.pencil") { showingEditSheet = true }
+            iconButton(systemName: "square.and.pencil", label: "Edit habit") {
+                showingEditSheet = true
+            }
 
             // [Interview] Placeholder for future per-habit settings (notifications, archive,
             // delete, etc.). Wired to the same edit sheet for now so the button feels alive.
-            iconButton(systemName: "gearshape") { showingEditSheet = true }
+            iconButton(systemName: "gearshape", label: "Habit settings") {
+                showingEditSheet = true
+            }
         }
     }
 
-    private func iconButton(systemName: String, action: @escaping () -> Void) -> some View {
+    private func iconButton(systemName: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 16, weight: .regular))
@@ -144,5 +154,6 @@ struct HabitDetailView: View {
                 )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 }

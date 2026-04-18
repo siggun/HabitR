@@ -8,12 +8,15 @@ import SwiftUI
 /// the Xcode project to pick up new files. Tones are tuned for the app's #1A1B1D dark
 /// background — they remain legible without being so bright they distract from accent UI.
 extension Color {
-    /// Empty cell tone — used for missed days, future days, and pre-creation days alike.
-    /// Deliberately the only "non-completed" color so empty days render uniformly.
-    static let gridEmpty = Color(red: 0.10, green: 0.20, blue: 0.13)
+    /// Muted dark-green tone. Two uses:
+    /// - Fill for empty contribution-grid cells (missed / future / pre-creation days).
+    /// - Background pill for completed days in the calendar (the date number reads on top).
+    static let gridMuted = Color(red: 0.10, green: 0.20, blue: 0.13)
 
-    /// Completed cell tone — bright green for visual reward.
-    static let gridFilled = Color(red: 0.21, green: 0.83, blue: 0.45)
+    /// Bright green accent tone. Two uses:
+    /// - Fill for completed contribution-grid cells.
+    /// - Small completion dot below calendar dates and the streak-flame icon.
+    static let gridAccent = Color(red: 0.21, green: 0.83, blue: 0.45)
 }
 
 /// Horizontal-scrolling 12-month contribution grid, GitHub-style.
@@ -26,8 +29,8 @@ extension Color {
 /// - **Month headers** float above the column whose Monday begins a new month.
 ///
 /// ## Color policy
-/// Single tone for empty (`Color.gridEmpty`), single tone for filled (`Color.gridFilled`). No
-/// distinction between missed / future / pre-creation — see `Color.gridEmpty` doc.
+/// Single tone for empty (`Color.gridMuted`), single tone for filled (`Color.gridAccent`). No
+/// distinction between missed / future / pre-creation — see `Color.gridMuted` doc.
 ///
 /// ## Scroll behavior
 /// `ScrollViewReader.scrollTo(_:anchor:)` is fired in `.onAppear` to pin the most recent week
@@ -174,7 +177,7 @@ struct GridView: View {
 
     /// Two-state cell coloring — see file-level palette doc.
     private func cellColor(for date: Date) -> Color {
-        habit.completionCount(for: date) > 0 ? .gridFilled : .gridEmpty
+        habit.completionCount(for: date) > 0 ? .gridAccent : .gridMuted
     }
 
     // MARK: - Grid Data
@@ -205,7 +208,11 @@ struct GridView: View {
             var week: [Date] = []
             for _ in 0..<7 {
                 week.append(cursor)
-                cursor = calendar.date(byAdding: .day, value: 1, to: cursor) ?? cursor
+                guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else {
+                    assertionFailure("Calendar failed to advance date")
+                    return weeks
+                }
+                cursor = next
             }
             weeks.append(week)
         }

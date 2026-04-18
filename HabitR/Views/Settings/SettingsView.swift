@@ -6,10 +6,13 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var storeKit = StoreKitService.shared
 
-    // Persisted settings via UserDefaults
+    // Persisted settings via UserDefaults.
+    // `UserDefaults.integer(forKey:)` returns 0 for missing keys, which would silently set a
+    // first-time user's reminder to midnight. `object(forKey:)` distinguishes "never set" from
+    // "set to 0" and lets us fall back to a sensible default of 8 PM.
     @State private var reminderEnabled = UserDefaults.standard.bool(forKey: "reminderEnabled")
-    @State private var reminderHour = UserDefaults.standard.integer(forKey: "reminderHour")
-    @State private var reminderMinute = UserDefaults.standard.integer(forKey: "reminderMinute")
+    @State private var reminderHour: Int = (UserDefaults.standard.object(forKey: "reminderHour") as? Int) ?? 20
+    @State private var reminderMinute: Int = (UserDefaults.standard.object(forKey: "reminderMinute") as? Int) ?? 0
     @State private var showingRestoreAlert = false
     @State private var restoreMessage = ""
 
