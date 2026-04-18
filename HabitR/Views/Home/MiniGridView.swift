@@ -2,24 +2,18 @@ import SwiftUI
 
 /// Compact contribution grid rendered inside each `HabitCardView` on the home screen.
 ///
-/// Layout: 7 columns (Sun→Sat), `weeksToShow` rows (oldest week on top). Cell size is derived
-/// from the available card width via `GeometryReader`, so the grid always fills its parent edge
-/// to edge without manual sizing per device.
+/// Layout: 7 columns (Sun→Sat), `weeksToShow` rows (oldest week on top). Cell size adapts to the
+/// card's available width via `GeometryReader` so the grid fills its parent edge to edge.
 ///
-/// ## Color semantics
-/// Three visual states, mapped in `cellColor(for:)`:
-/// | State                         | Color             | Meaning                              |
-/// | ----------------------------- | ----------------- | ------------------------------------ |
-/// | Day with a completion         | `Color.accentColor` | Habit was performed that day        |
-/// | Future day or pre-creation day | `Color(.systemGray5)` | "Not applicable" — don't count as a miss |
-/// | In-range day with no completion | `Color(.systemGray6)` | Missed day                          |
+/// ## Color policy (single-tone empty)
+/// Every cell is one of two colors:
+/// - `Color.gridFilled` — the day has a logged completion.
+/// - `Color.gridEmpty`  — every other state (missed, future, pre-creation).
 ///
-/// > **Known contrast issue (dark mode):** the card's background is
-/// > `Color(.systemGray6).opacity(0.5)` over the app's near-black background. `systemGray6`
-/// > renders *almost identical* to that stack, so missed-day cells visually disappear into the
-/// > card. This is why some grids on dark mode look "blacked out" at the bottom. Cells painted
-/// > `systemGray5` (future / pre-creation) are lighter and remain visible. Fixing this means
-/// > picking a distinct in-range-empty tone or tweaking the card background alpha.
+/// Past versions of this view tried to distinguish "missed in-range" from "future / pre-creation"
+/// using `systemGray6` vs `systemGray5`. On dark backgrounds, `systemGray6` collapsed into the
+/// near-black card fill and the missed-day cells became invisible. The fix was to pick one
+/// readable empty tone and use it everywhere.
 struct MiniGridView: View {
     let habit: Habit
 
@@ -27,15 +21,13 @@ struct MiniGridView: View {
     /// crowding the compact layout. Full history lives on the detail view's `GridView`.
     private let weeksToShow = 6
 
-    /// Inter-cell gutter in points. Small value preserves the "dense grid" aesthetic of the
-    /// GitHub contribution graph that inspired this visualization.
+    /// Inter-cell gutter in points. Small value preserves the "dense grid" aesthetic.
     private let cellSpacing: CGFloat = 2
 
     var body: some View {
         GeometryReader { geo in
             // [Interview] Solve for cellSize so 7 cells + 6 gutters exactly fill the width.
-            // `max(0, …)` guards against a momentary negative width during layout (e.g. the
-            // card animating in at zero size), which would otherwise crash `.frame(width:)`.
+            // `max(0, …)` guards against a momentary negative width during layout.
             let cellSize = max(0, (geo.size.width - cellSpacing * 6) / 7)
 
             VStack(spacing: cellSpacing) {
@@ -52,44 +44,22 @@ struct MiniGridView: View {
             .frame(width: geo.size.width, alignment: .topLeading)
         }
         // [Interview] GeometryReader has no intrinsic size — it fills its parent. Pinning a
-        // 7:6 aspect ratio gives SwiftUI's layout system a concrete height to reserve, which
-        // is what lets the card lay itself out without collapsing to zero.
+        // 7:6 aspect ratio gives SwiftUI's layout system a concrete height to reserve.
         .aspectRatio(7.0 / 6.0, contentMode: .fit)
     }
 
     // MARK: - Cell Color
 
-    /// Decide the fill color for a single calendar day.
-    ///
-    /// See the class-level dark-mode contrast note — the `systemGray6` branch here is the source
-    /// of the "disappearing missed-day cells" behavior on dark backgrounds.
+    /// Two-state coloring: filled on completion, empty otherwise. Future / pre-creation /
+    /// missed days all render identically — we don't punish a missed day visually.
     private func cellColor(for date: Date) -> Color {
-        let calendar = Calendar.current
-        let isBeforeCreation = date < calendar.startOfDay(for: habit.createdAt)
-        let isFuture = date > calendar.startOfDay(for: Date())
-
-        // [Interview] Both "before creation" and "future" are rendered the same way — they're
-        // conceptually "N/A" (the habit didn't exist, or the day hasn't happened). We use a
-        // lighter gray so these read as placeholders rather than as misses.
-        if isBeforeCreation || isFuture {
-            return Color(.systemGray5)
-        }
-
-        let count = habit.completionCount(for: date)
-        return count > 0 ? Color.accentColor : Color(.systemGray6)
+        habit.completionCount(for: date) > 0 ? .gridFilled : .gridEmpty
     }
 
     // MARK: - Grid Data
 
-    /// Build a `[weeks][days]` matrix of calendar dates for the window this grid displays.
-    ///
-    /// Algorithm:
-    /// 1. Anchor on the current week's Sunday (weekday == 1 in `Calendar.current`).
-    /// 2. Step back `weeksToShow - 1` weeks to find the first date shown.
-    /// 3. Walk forward day by day, packing 7-day rows.
-    ///
-    /// - Returns: `weeksToShow` rows of exactly 7 `Date` values, each normalized implicitly by
-    ///   the calendar arithmetic (we never mutate the time-of-day component).
+    /// Build a `[weeks][days]` matrix of dates for the window this grid displays.
+    /// Each row is a week (Sun→Sat), oldest week first.
     private func gridWeeks() -> [[Date]] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
@@ -112,9 +82,6 @@ struct MiniGridView: View {
             var week: [Date] = []
             for _ in 0..<7 {
                 week.append(currentDate)
-                // [Interview] `?? currentDate` guards against Calendar returning nil for an
-                // arithmetic operation — shouldn't happen for +1 day, but nil-coalescing keeps
-                // the loop making progress rather than infinite-looping on the same date.
                 currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? currentDate
             }
             weeks.append(week)

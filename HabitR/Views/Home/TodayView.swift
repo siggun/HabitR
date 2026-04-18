@@ -80,11 +80,9 @@ struct TodayView: View {
             .sheet(isPresented: $showingPaywall) { PaywallView() }
             .sheet(isPresented: $showingSettings) { SettingsView() }
             .sheet(item: $selectedHabit) { habit in
-                // [Interview] `NavigationStack` inside the sheet gives the detail view its own
-                // toolbar/title without leaking into the home screen's stack.
-                NavigationStack {
-                    HabitDetailView(habit: habit)
-                }
+                // [Interview] No NavigationStack — the redesigned detail sheet renders its own
+                // header (icon + title + close X) and doesn't need a system nav bar.
+                HabitDetailView(habit: habit)
             }
         }
     }
