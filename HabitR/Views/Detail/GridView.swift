@@ -1,17 +1,33 @@
 import SwiftUI
 
-// GitHub-style contribution grid — the signature visual of the app
-// Days of the week go left to right (Sun-Sat), weeks stack top to bottom
-// Shows the last ~18 weeks of data
+/// Full contribution grid rendered on `HabitDetailView` — the app's signature visual.
+///
+/// Same conceptual layout as `MiniGridView` (7 columns Sun→Sat, weeks stacked vertically) but
+/// shows a longer history (~18 weeks ≈ 4 months) at a fixed cell size instead of adapting to
+/// parent width. Fixed sizing is used here because the detail screen is already horizontally
+/// padded inside a `ScrollView`, and we want cells to render at a legible, consistent size
+/// across devices rather than stretching on iPad.
+///
+/// > **Shared dark-mode contrast caveat:** see the class-level note on `MiniGridView`. The
+/// > `cellColor(count:isBeforeCreation:isFuture:)` method duplicates the same color logic, so
+/// > the same "disappearing missed-day cells on dark backgrounds" behavior applies here. Any
+/// > fix should be applied to both views in lockstep.
 struct GridView: View {
     let habit: Habit
 
-    // Number of weeks to show (roughly 4 months)
+    /// ~4 months of history — enough to visualize seasonal patterns without introducing
+    /// horizontal scrolling.
     private let weeksToShow = 18
+
+    /// Fixed cell edge length in points. Chosen to feel readable on iPhone SE without being
+    /// sparse on Pro Max.
     private let cellSize: CGFloat = 14
+
+    /// Inter-cell gutter. Slightly larger than `MiniGridView`'s because cells are bigger.
     private let cellSpacing: CGFloat = 3
 
-    // Day-of-week labels shown above the grid
+    /// Day-of-week header labels. Two "T" and two "S" are intentional (Tue/Thu and Sat/Sun
+    /// share initials) — matches Apple's own calendar conventions.
     private let dayLabels = ["S", "M", "T", "W", "T", "F", "S"]
 
     var body: some View {
@@ -20,12 +36,13 @@ struct GridView: View {
                 .font(.headline)
                 .padding(.horizontal)
 
-            // NOTE: no inner ScrollView — HabitDetailView is already inside
-            // a ScrollView, so nesting another here would break scrolling.
+            // [Interview] No inner ScrollView intentionally — `HabitDetailView` wraps this in
+            // its own ScrollView. Nesting two vertically-scrolling scroll views would hijack
+            // gestures and produce a subtle "scroll doesn't release" bug that's painful to
+            // diagnose. Keeping this flat delegates all scrolling to the parent.
             VStack(alignment: .leading, spacing: 0) {
                 dayHeaderRow
 
-                // Grid of day cells — each row is a week
                 VStack(spacing: cellSpacing) {
                     ForEach(gridWeeks(), id: \.self) { week in
                         HStack(spacing: cellSpacing) {
@@ -42,6 +59,8 @@ struct GridView: View {
 
     // MARK: - Day Header
 
+    /// Row of day-of-week initials rendered above the grid. Cell-width-matched so each letter
+    /// aligns vertically with its column.
     private var dayHeaderRow: some View {
         HStack(spacing: cellSpacing) {
             ForEach(0..<7, id: \.self) { day in
@@ -56,7 +75,8 @@ struct GridView: View {
 
     // MARK: - Grid Cell
 
-    /// A single cell in the grid — solid color for completed, empty for not
+    /// Build a single cell view. Branches the color decision into a pure helper so the logic is
+    /// easy to unit-test if a color scheme refactor ever happens.
     private func gridCell(for date: Date) -> some View {
         let count = habit.completionCount(for: date)
         let isBeforeCreation = date < Calendar.current.startOfDay(for: habit.createdAt)
@@ -67,7 +87,10 @@ struct GridView: View {
             .frame(width: cellSize, height: cellSize)
     }
 
-    /// Solid on/off — completed = accent color, not completed = empty gray
+    /// Color policy (mirrors `MiniGridView`):
+    /// - future / pre-creation → `systemGray5` (visibly lighter placeholder)
+    /// - completed             → accent color
+    /// - in-range, not done    → `systemGray6` (dark-mode contrast caveat — see class doc)
     private func cellColor(count: Int, isBeforeCreation: Bool, isFuture: Bool) -> Color {
         if isBeforeCreation || isFuture {
             return Color(.systemGray5)
@@ -77,19 +100,20 @@ struct GridView: View {
 
     // MARK: - Grid Data
 
-    /// Generate the grid data — an array of weeks, each containing 7 days
-    /// Each row is a week (Sun-Sat), arranged top to bottom (oldest first)
+    /// Produce `weeksToShow` weeks of dates, oldest first. Logic mirrors `MiniGridView.gridWeeks()`
+    /// — kept duplicated (rather than extracted) because the two views diverge on sizing and
+    /// history length, and an abstraction would mostly be parameter-shuffling.
     private func gridWeeks() -> [[Date]] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
-        // Find the start of this week (Sunday)
+        // [Interview] Same anchor trick as MiniGridView: back up to the Sunday of this week,
+        // then back up N-1 weeks to get the grid's first day.
         let weekday = calendar.component(.weekday, from: today)
         guard let startOfWeek = calendar.date(
             byAdding: .day, value: -(weekday - 1), to: today
         ) else { return [] }
 
-        // Go back weeksToShow weeks
         guard let gridStart = calendar.date(
             byAdding: .weekOfYear, value: -(weeksToShow - 1), to: startOfWeek
         ) else { return [] }
