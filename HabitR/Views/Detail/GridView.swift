@@ -55,10 +55,13 @@ struct GridView: View {
         // to the left edge while the grid scrolls horizontally underneath. If the labels were
         // inside the ScrollView they'd scroll off-screen with the rest of the content.
         //
-        // `.frame(maxWidth: .infinity)` on the ScrollView forces it to consume all remaining
-        // horizontal space next to the fixed day-label gutter. Without it, the ScrollView sizes
-        // down toward its content's intrinsic width hint and the HStack ends up narrower than
-        // its parent — which drags the day labels inward from the leading edge.
+        // The OUTER `.frame(maxWidth: .infinity, alignment: .leading)` is the actual gap-fixer:
+        // GridView's parent VStack in HabitDetailView is default-centered, and other children
+        // (actionRow, CalendarView) decide that VStack's width. Without the maxWidth modifier
+        // here, the HStack sizes to its content (~34pt of day labels + whatever the ScrollView
+        // reports) and gets center-aligned within the wider VStack — that's the gap on the left.
+        // Forcing the HStack to span the full available width with leading alignment pins the
+        // day labels flush against the sheet's leading padding.
         HStack(alignment: .top, spacing: 6) {
             dayLabelsColumn
 
@@ -70,8 +73,8 @@ struct GridView: View {
                 .padding(.vertical, 4)
             }
             .defaultScrollAnchor(.trailing)
-            .frame(maxWidth: .infinity)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Day Labels
