@@ -100,8 +100,12 @@ struct GridView: View {
 
     /// Row of month names floating above the grid. We render one slot per week column; the slot
     /// is empty unless that week contains the 1st of a month, in which case the month name is
-    /// painted into it. `.fixedSize()` lets the text overflow into adjacent slots so wider names
-    /// like "September" don't truncate.
+    /// painted into it. `.fixedSize()` lets the text render at its natural width without
+    /// truncation, and the trailing `.frame(width: cellSize)` locks each slot's **layout**
+    /// contribution back to the grid's column width — so a wide month name visually spills into
+    /// the empty neighbor slot without pushing the header row wider than the grid rows below.
+    /// (If header width exceeded grid width, `.defaultScrollAnchor(.trailing)` would align on the
+    /// header's trailing edge and leave a trailing gap on the grid.)
     private var monthHeaderRow: some View {
         let weeks = gridWeeks()
         return HStack(alignment: .bottom, spacing: cellSpacing) {
@@ -115,6 +119,7 @@ struct GridView: View {
                             .fixedSize()
                     }
                 }
+                .frame(width: cellSize, height: monthHeaderHeight, alignment: .leading)
             }
         }
     }
