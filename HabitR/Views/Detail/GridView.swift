@@ -51,33 +51,38 @@ struct GridView: View {
     private let dayLabelWidth: CGFloat = 28
 
     var body: some View {
-        // [Interview] `safeAreaInset` is the SwiftUI primitive purpose-built for this exact
-        // pattern: a fixed sidebar pinned alongside a ScrollView. It reserves space at the
-        // ScrollView's leading edge for the inset content (our day-label gutter) and feeds the
-        // remaining width to the scrollable area — no GeometryReader, no HStack width-distribution
-        // heuristics, no .frame(maxWidth) tricks.
+        // [Interview] Sticky gutter via ZStack overlay — the one approach that's immune to
+        // every SwiftUI layout quirk we've tripped over:
         //
-        // Why earlier attempts (HStack + maxWidth, then GeometryReader) failed: a horizontal
-        // ScrollView with `.defaultScrollAnchor(.trailing)` confuses the HStack's flex-shrink
-        // path because the ScrollView reports its 881pt content width as an intrinsic size hint.
-        // safeAreaInset bypasses that entirely by attaching the gutter via the safe-area system,
-        // which is independent of HStack/VStack width distribution.
+        //   • The ScrollView fills the full available width, so its scroll bounds work
+        //     correctly (no over-scroll past the content's leading edge).
+        //   • `.padding(.leading, dayLabelWidth + 6)` on the scrollable content reserves a
+        //     34pt margin at the leading edge, so the grid cells never slide under the gutter
+        //     even when scrolled all the way left.
+        //   • `dayLabelsColumn` is overlaid on top at `.topLeading`, with a solid background
+        //     (`AppBackground`) so it visually masks the reserved padding area behind it.
+        //   • `.defaultScrollAnchor(.trailing)` still works because it operates on the
+        //     ScrollView's full-width viewport — no inset/safe-area interaction to confuse it.
         //
-        // The `Color.clear` spacer in `dayLabelsColumn` is sized to (monthHeaderHeight +
-        // headerToGridSpacing + topPadding) so the Tue/Thu/Sat labels align with the matching
-        // grid rows below the month header — see `dayLabelsColumn` for the exact arithmetic.
-        ScrollView(.horizontal, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 4) {
-                monthHeaderRow
-                gridRows
+        // Prior attempts (HStack + maxWidth, GeometryReader explicit width, safeAreaInset)
+        // all fought SwiftUI's layout heuristics around a horizontal ScrollView that advertises
+        // its content width as an intrinsic hint. This approach doesn't negotiate widths at
+        // all — the gutter is drawn *on top* of the ScrollView, not next to it.
+        ZStack(alignment: .topLeading) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 4) {
+                    monthHeaderRow
+                    gridRows
+                }
+                .padding(.vertical, 4)
+                .padding(.leading, dayLabelWidth + 6)
             }
-            .padding(.vertical, 4)
-        }
-        .defaultScrollAnchor(.trailing)
-        .safeAreaInset(edge: .leading, alignment: .top, spacing: 6) {
+            .defaultScrollAnchor(.trailing)
+
             dayLabelsColumn
+                .background(Color("AppBackground"))
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Day Labels
