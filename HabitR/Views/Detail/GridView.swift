@@ -51,41 +51,49 @@ struct GridView: View {
     private let dayLabelWidth: CGFloat = 28
 
     var body: some View {
-        // [Interview] `dayLabelsColumn` sits OUTSIDE the ScrollView so Tue/Thu/Sat stay pinned
-        // to the left edge while the grid scrolls horizontally underneath. If the labels were
-        // inside the ScrollView they'd scroll off-screen with the rest of the content.
+        // [Interview] `safeAreaInset` is the SwiftUI primitive purpose-built for this exact
+        // pattern: a fixed sidebar pinned alongside a ScrollView. It reserves space at the
+        // ScrollView's leading edge for the inset content (our day-label gutter) and feeds the
+        // remaining width to the scrollable area — no GeometryReader, no HStack width-distribution
+        // heuristics, no .frame(maxWidth) tricks.
         //
-        // The OUTER `.frame(maxWidth: .infinity, alignment: .leading)` is the actual gap-fixer:
-        // GridView's parent VStack in HabitDetailView is default-centered, and other children
-        // (actionRow, CalendarView) decide that VStack's width. Without the maxWidth modifier
-        // here, the HStack sizes to its content (~34pt of day labels + whatever the ScrollView
-        // reports) and gets center-aligned within the wider VStack — that's the gap on the left.
-        // Forcing the HStack to span the full available width with leading alignment pins the
-        // day labels flush against the sheet's leading padding.
-        HStack(alignment: .top, spacing: 6) {
-            dayLabelsColumn
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 4) {
-                    monthHeaderRow
-                    gridRows
-                }
-                .padding(.vertical, 4)
+        // Why earlier attempts (HStack + maxWidth, then GeometryReader) failed: a horizontal
+        // ScrollView with `.defaultScrollAnchor(.trailing)` confuses the HStack's flex-shrink
+        // path because the ScrollView reports its 881pt content width as an intrinsic size hint.
+        // safeAreaInset bypasses that entirely by attaching the gutter via the safe-area system,
+        // which is independent of HStack/VStack width distribution.
+        //
+        // The `Color.clear` spacer in `dayLabelsColumn` is sized to (monthHeaderHeight +
+        // headerToGridSpacing + topPadding) so the Tue/Thu/Sat labels align with the matching
+        // grid rows below the month header — see `dayLabelsColumn` for the exact arithmetic.
+        ScrollView(.horizontal, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 4) {
+                monthHeaderRow
+                gridRows
             }
-            .defaultScrollAnchor(.trailing)
+            .padding(.vertical, 4)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .defaultScrollAnchor(.trailing)
+        .safeAreaInset(edge: .leading, alignment: .top, spacing: 6) {
+            dayLabelsColumn
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Day Labels
 
     /// Left gutter showing Tue / Thu / Sat labels at rows 1, 3, 5. Other rows render an
     /// empty placeholder so vertical alignment with the grid stays exact.
+    ///
+    /// The leading `Color.clear` spacer matches the vertical offset of the grid's first row
+    /// inside the ScrollView so the labels line up:
+    /// - 4pt: matches `.padding(.vertical, 4)` on the inner VStack
+    /// - 16pt: monthHeaderHeight
+    /// - 4pt: VStack(spacing: 4) gap between header and grid rows
+    /// = 24pt total. Keep this in lockstep with `body`'s ScrollView content layout.
     private var dayLabelsColumn: some View {
         VStack(alignment: .trailing, spacing: cellSpacing) {
-            // Reserve space matching the month header above the grid so day labels
-            // line up with their actual day rows, not the header.
-            Color.clear.frame(height: monthHeaderHeight)
+            Color.clear.frame(height: monthHeaderHeight + 8)
 
             ForEach(0..<7, id: \.self) { row in
                 Text(dayLabel(forRow: row))
