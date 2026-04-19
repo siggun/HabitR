@@ -54,6 +54,11 @@ struct GridView: View {
         // [Interview] `dayLabelsColumn` sits OUTSIDE the ScrollView so Tue/Thu/Sat stay pinned
         // to the left edge while the grid scrolls horizontally underneath. If the labels were
         // inside the ScrollView they'd scroll off-screen with the rest of the content.
+        //
+        // `.frame(maxWidth: .infinity)` on the ScrollView forces it to consume all remaining
+        // horizontal space next to the fixed day-label gutter. Without it, the ScrollView sizes
+        // down toward its content's intrinsic width hint and the HStack ends up narrower than
+        // its parent — which drags the day labels inward from the leading edge.
         HStack(alignment: .top, spacing: 6) {
             dayLabelsColumn
 
@@ -65,6 +70,7 @@ struct GridView: View {
                 .padding(.vertical, 4)
             }
             .defaultScrollAnchor(.trailing)
+            .frame(maxWidth: .infinity)
         }
     }
 
