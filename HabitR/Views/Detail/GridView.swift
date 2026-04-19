@@ -51,18 +51,21 @@ struct GridView: View {
     private let dayLabelWidth: CGFloat = 28
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: 6) {
-                dayLabelsColumn
+        // [Interview] `dayLabelsColumn` sits OUTSIDE the ScrollView so Tue/Thu/Sat stay pinned
+        // to the left edge while the grid scrolls horizontally underneath. If the labels were
+        // inside the ScrollView they'd scroll off-screen with the rest of the content.
+        HStack(alignment: .top, spacing: 6) {
+            dayLabelsColumn
 
+            ScrollView(.horizontal, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 4) {
                     monthHeaderRow
                     gridRows
                 }
+                .padding(.vertical, 4)
             }
-            .padding(.vertical, 4)
+            .defaultScrollAnchor(.trailing)
         }
-        .defaultScrollAnchor(.trailing)
     }
 
     // MARK: - Day Labels
