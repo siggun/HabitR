@@ -50,61 +50,50 @@ struct GridView: View {
     /// Width reserved for the day-of-week label gutter on the left side.
     private let dayLabelWidth: CGFloat = 28
 
-    /// Computed height of the grid, used to bound `GeometryReader`. We can't let GeometryReader
-    /// expand vertically (its default) because then the grid would swallow the whole scroll
-    /// view it sits in. Keep this in lockstep with `body`'s visible layout.
-    private var contentHeight: CGFloat {
-        let gridRowsHeight = CGFloat(7) * cellSize + CGFloat(6) * cellSpacing
-        let headerToGridSpacing: CGFloat = 4
-        let verticalPadding: CGFloat = 8 // .padding(.vertical, 4) top + bottom
-        return monthHeaderHeight + headerToGridSpacing + gridRowsHeight + verticalPadding
-    }
-
     var body: some View {
-        // [Interview] Why GeometryReader instead of `.frame(maxWidth: .infinity)` on the HStack?
+        // [Interview] `safeAreaInset` is the SwiftUI primitive purpose-built for this exact
+        // pattern: a fixed sidebar pinned alongside a ScrollView. It reserves space at the
+        // ScrollView's leading edge for the inset content (our day-label gutter) and feeds the
+        // remaining width to the scrollable area — no GeometryReader, no HStack width-distribution
+        // heuristics, no .frame(maxWidth) tricks.
         //
-        // The horizontal ScrollView (especially with `.defaultScrollAnchor(.trailing)`) reports
-        // its intrinsic content width (~881pt for 52 week-columns) to its parent HStack. In an
-        // HStack containing both a fixed-width child (day labels, 28pt) and that ScrollView,
-        // the "shrink the flexible one" heuristic does not reliably contract the ScrollView to
-        // the offered viewport width — so the HStack ends up wider than its parent VStack and
-        // our content gets visually shoved inward, leaving the gap on the left.
+        // Why earlier attempts (HStack + maxWidth, then GeometryReader) failed: a horizontal
+        // ScrollView with `.defaultScrollAnchor(.trailing)` confuses the HStack's flex-shrink
+        // path because the ScrollView reports its 881pt content width as an intrinsic size hint.
+        // safeAreaInset bypasses that entirely by attaching the gutter via the safe-area system,
+        // which is independent of HStack/VStack width distribution.
         //
-        // GeometryReader sidesteps the heuristic entirely: we read the actual available width
-        // and hand the ScrollView an explicit viewport width of `available - gutter - spacing`.
-        // The day-label gutter now hugs the leading edge and the ScrollView's internal content
-        // scrolls within a known viewport.
-        //
-        // The outer `.frame(height: contentHeight)` is mandatory — GeometryReader otherwise
-        // expands to fill all offered vertical space, which would collapse the rest of the
-        // detail sheet underneath.
-        GeometryReader { geo in
-            HStack(alignment: .top, spacing: 6) {
-                dayLabelsColumn
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        monthHeaderRow
-                        gridRows
-                    }
-                    .padding(.vertical, 4)
-                }
-                .defaultScrollAnchor(.trailing)
-                .frame(width: max(0, geo.size.width - dayLabelWidth - 6))
+        // The `Color.clear` spacer in `dayLabelsColumn` is sized to (monthHeaderHeight +
+        // headerToGridSpacing + topPadding) so the Tue/Thu/Sat labels align with the matching
+        // grid rows below the month header — see `dayLabelsColumn` for the exact arithmetic.
+        ScrollView(.horizontal, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 4) {
+                monthHeaderRow
+                gridRows
             }
+            .padding(.vertical, 4)
         }
-        .frame(height: contentHeight)
+        .defaultScrollAnchor(.trailing)
+        .safeAreaInset(edge: .leading, alignment: .top, spacing: 6) {
+            dayLabelsColumn
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Day Labels
 
     /// Left gutter showing Tue / Thu / Sat labels at rows 1, 3, 5. Other rows render an
     /// empty placeholder so vertical alignment with the grid stays exact.
+    ///
+    /// The leading `Color.clear` spacer matches the vertical offset of the grid's first row
+    /// inside the ScrollView so the labels line up:
+    /// - 4pt: matches `.padding(.vertical, 4)` on the inner VStack
+    /// - 16pt: monthHeaderHeight
+    /// - 4pt: VStack(spacing: 4) gap between header and grid rows
+    /// = 24pt total. Keep this in lockstep with `body`'s ScrollView content layout.
     private var dayLabelsColumn: some View {
         VStack(alignment: .trailing, spacing: cellSpacing) {
-            // Reserve space matching the month header above the grid so day labels
-            // line up with their actual day rows, not the header.
-            Color.clear.frame(height: monthHeaderHeight)
+            Color.clear.frame(height: monthHeaderHeight + 8)
 
             ForEach(0..<7, id: \.self) { row in
                 Text(dayLabel(forRow: row))
