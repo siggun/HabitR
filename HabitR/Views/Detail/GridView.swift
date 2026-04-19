@@ -50,31 +50,50 @@ struct GridView: View {
     /// Width reserved for the day-of-week label gutter on the left side.
     private let dayLabelWidth: CGFloat = 28
 
-    var body: some View {
-        // [Interview] `dayLabelsColumn` sits OUTSIDE the ScrollView so Tue/Thu/Sat stay pinned
-        // to the left edge while the grid scrolls horizontally underneath. If the labels were
-        // inside the ScrollView they'd scroll off-screen with the rest of the content.
-        //
-        // The OUTER `.frame(maxWidth: .infinity, alignment: .leading)` is the actual gap-fixer:
-        // GridView's parent VStack in HabitDetailView is default-centered, and other children
-        // (actionRow, CalendarView) decide that VStack's width. Without the maxWidth modifier
-        // here, the HStack sizes to its content (~34pt of day labels + whatever the ScrollView
-        // reports) and gets center-aligned within the wider VStack — that's the gap on the left.
-        // Forcing the HStack to span the full available width with leading alignment pins the
-        // day labels flush against the sheet's leading padding.
-        HStack(alignment: .top, spacing: 6) {
-            dayLabelsColumn
+    /// Computed height of the grid, used to bound `GeometryReader`. We can't let GeometryReader
+    /// expand vertically (its default) because then the grid would swallow the whole scroll
+    /// view it sits in. Keep this in lockstep with `body`'s visible layout.
+    private var contentHeight: CGFloat {
+        let gridRowsHeight = CGFloat(7) * cellSize + CGFloat(6) * cellSpacing
+        let headerToGridSpacing: CGFloat = 4
+        let verticalPadding: CGFloat = 8 // .padding(.vertical, 4) top + bottom
+        return monthHeaderHeight + headerToGridSpacing + gridRowsHeight + verticalPadding
+    }
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 4) {
-                    monthHeaderRow
-                    gridRows
+    var body: some View {
+        // [Interview] Why GeometryReader instead of `.frame(maxWidth: .infinity)` on the HStack?
+        //
+        // The horizontal ScrollView (especially with `.defaultScrollAnchor(.trailing)`) reports
+        // its intrinsic content width (~881pt for 52 week-columns) to its parent HStack. In an
+        // HStack containing both a fixed-width child (day labels, 28pt) and that ScrollView,
+        // the "shrink the flexible one" heuristic does not reliably contract the ScrollView to
+        // the offered viewport width — so the HStack ends up wider than its parent VStack and
+        // our content gets visually shoved inward, leaving the gap on the left.
+        //
+        // GeometryReader sidesteps the heuristic entirely: we read the actual available width
+        // and hand the ScrollView an explicit viewport width of `available - gutter - spacing`.
+        // The day-label gutter now hugs the leading edge and the ScrollView's internal content
+        // scrolls within a known viewport.
+        //
+        // The outer `.frame(height: contentHeight)` is mandatory — GeometryReader otherwise
+        // expands to fill all offered vertical space, which would collapse the rest of the
+        // detail sheet underneath.
+        GeometryReader { geo in
+            HStack(alignment: .top, spacing: 6) {
+                dayLabelsColumn
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        monthHeaderRow
+                        gridRows
+                    }
+                    .padding(.vertical, 4)
                 }
-                .padding(.vertical, 4)
+                .defaultScrollAnchor(.trailing)
+                .frame(width: max(0, geo.size.width - dayLabelWidth - 6))
             }
-            .defaultScrollAnchor(.trailing)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: contentHeight)
     }
 
     // MARK: - Day Labels
