@@ -55,14 +55,19 @@ struct GridView: View {
         HStack(alignment: .top, spacing: 6) {
             dayLabelsColumn
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 4) {
-                    monthHeaderRow
-                    gridRows
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        monthHeaderRow
+                        gridRows
+                    }
+                    .padding(.vertical, 4)
+                    .id("gridContent")
                 }
-                .padding(.vertical, 4)
+                .onAppear {
+                    proxy.scrollTo("gridContent", anchor: .trailing)
+                }
             }
-            .defaultScrollAnchor(.trailing)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal)
