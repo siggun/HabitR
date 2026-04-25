@@ -64,6 +64,7 @@ struct GridView: View {
             }
             .defaultScrollAnchor(.trailing)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal)
     }
 
