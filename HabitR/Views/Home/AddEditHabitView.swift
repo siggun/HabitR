@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import os
 
 // Sheet for creating a new habit or editing an existing one
 // Includes SF Symbol icon picker, name field, frequency, and completion mode options
@@ -147,7 +148,16 @@ struct AddEditHabitView: View {
             modelContext.insert(habit)
         }
 
-        try? modelContext.save()
+        // Surface save failures to the log rather than swallowing silently. We still dismiss on
+        // failure — the user has nowhere to go and SwiftData save errors in this app are
+        // effectively unrecoverable (disk full, corrupt store). A richer UX would push this
+        // error into an alert; deferred until product signals the failure mode matters.
+        do {
+            try modelContext.save()
+        } catch {
+            Logger(subsystem: "HabitR", category: "AddEditHabitView")
+                .error("Failed to save habit: \(error.localizedDescription, privacy: .public)")
+        }
         dismiss()
     }
 }

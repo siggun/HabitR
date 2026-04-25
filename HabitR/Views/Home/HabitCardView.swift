@@ -1,35 +1,60 @@
 import SwiftUI
 
-// A single habit card for the home screen grid
-// Shows a checkmark/emoji toggle, habit name, month label, and mini contribution grid
+/// A single habit tile rendered in the home screen's 2-column grid.
+///
+/// Composition:
+/// - Header row: completion button (morphs between check and emoji), title, month label, and
+///   optional counter progress (for `.counter` habits).
+/// - Preview grid: 6-week `MiniGridView` visualizing recent completion history.
+///
+/// ## Interaction model
+/// The card exposes three closures — `onToggle`, `onIncrement`, `onDecrement` — to keep the view
+/// purely presentational. All state mutation lives in the parent (`TodayView`) so this view can
+/// be previewed and tested without a `ModelContext`. `handleCompletionTap()` picks the right
+/// closure based on the habit's `completionMode`.
+///
+/// ## Styling caveat
+/// The background is `Color(.systemGray6).opacity(0.5)` — visually close to the app's near-black
+/// dark-mode background. This is the same tone used for "missed day" cells in `MiniGridView`,
+/// which is why those cells appear to disappear on dark mode. See `MiniGridView`'s class doc.
 struct HabitCardView: View {
     let habit: Habit
+
+    /// Tap handler for toggle-mode habits. Invoked from `handleCompletionTap()`.
     let onToggle: () -> Void
+
+    /// Tap handler for counter-mode habits (adds 1 to today's count).
     let onIncrement: () -> Void
+
+    /// Declared on the interface for symmetry — not currently wired to the big button, but used
+    /// by contextual affordances in the detail/edit paths. Kept here so the card surface matches.
     let onDecrement: () -> Void
 
+    /// Drives the tap-scale spring animation on the completion button.
     @State private var isAnimating = false
 
+    /// Whether the habit is done *today* per its completion-mode rules. Cached derivations like
+    /// these run once per body invocation — SwiftUI handles the memoization for us via `body`
+    /// recomputation on `@Query` changes.
     private var isCompletedToday: Bool {
         habit.isCompleted(for: Date())
     }
 
+    /// Today's raw count. Used to render the "3/8" progress label for counter habits.
     private var todayCount: Int {
         habit.completionCount(for: Date())
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Header: checkmark/emoji + name + month
             cardHeader
-
-            // Mini contribution grid
             MiniGridView(habit: habit)
         }
         .padding(10)
         .background(Color(.systemGray6).opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
+            // Hairline stroke so the card remains visible against backgrounds of similar tone.
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color(.systemGray4), lineWidth: 0.5)
         )
@@ -37,9 +62,10 @@ struct HabitCardView: View {
 
     // MARK: - Card Header
 
+    /// Top row: completion button + text stack. Laid out as an HStack with a trailing `Spacer()`
+    /// so the text hugs the button on the left and the card size is driven by the grid below.
     private var cardHeader: some View {
         HStack(spacing: 8) {
-            // Completion button — checkmark when incomplete, emoji when done
             completionButton
 
             VStack(alignment: .leading, spacing: 1) {
@@ -48,12 +74,13 @@ struct HabitCardView: View {
                     .fontWeight(.semibold)
                     .lineLimit(1)
 
-                // Month/year label
                 Text(monthYearLabel)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
 
-                // Counter mode: show count/target
+                // [Interview] Counter-mode-only affordance. For toggle habits we skip this row
+                // entirely to keep the card compact. `.monospacedDigit()` prevents numerals from
+                // changing width as the count increments — otherwise the label would "jitter".
                 if habit.completionMode == .counter {
                     Text("\(todayCount)/\(habit.dailyTarget)")
                         .font(.caption2)
@@ -69,12 +96,13 @@ struct HabitCardView: View {
 
     // MARK: - Completion Button
 
+    /// Morphs between "unchecked" and "completed" states. When completed, it shows the habit's
+    /// SF Symbol inside a tinted circle — a small reward signal reinforcing the positive action.
     private var completionButton: some View {
         Button {
             handleCompletionTap()
         } label: {
             if isCompletedToday {
-                // Completed — show habit icon in a colored circle
                 Image(systemName: habit.emoji)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.accentColor)
@@ -82,7 +110,6 @@ struct HabitCardView: View {
                     .background(Color.accentColor.opacity(0.15))
                     .clipShape(Circle())
             } else {
-                // Not completed — show checkmark icon
                 Image(systemName: "checkmark")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color(.systemGray3))
@@ -91,26 +118,32 @@ struct HabitCardView: View {
                     .clipShape(Circle())
             }
         }
+        // [Interview] `.plain` strips the default blue tint and hover/press effects so our
+        // custom circle is the only visual. Without this the button reads as a system link.
         .buttonStyle(.plain)
         .scaleEffect(isAnimating ? 1.2 : 1.0)
     }
 
     // MARK: - Actions
 
+    /// Combined feedback + routing: play haptic, run the spring animation, and fire the right
+    /// closure for the habit's completion mode.
     private func handleCompletionTap() {
-        // Haptic feedback
+        // [Interview] Haptic feedback is generated on the main thread synchronously. For heavy
+        // taps this is fine; for rapid-fire increments consider pre-preparing the generator.
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.impactOccurred()
 
-        // Scale animation
         withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
             isAnimating = true
         }
+        // [Interview] Manually reset the animated flag after the spring would have settled.
+        // Cleaner alternative: attach an `.onAnimationCompleted` modifier — not used here to
+        // avoid pulling in a custom modifier for one call site.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             isAnimating = false
         }
 
-        // Call the right action based on completion mode
         if habit.completionMode == .toggle {
             onToggle()
         } else {
@@ -120,7 +153,8 @@ struct HabitCardView: View {
 
     // MARK: - Helpers
 
-    /// Format the current month and year like "Apr 2026"
+    /// "Apr 2026"-style label. Re-created per body invocation; acceptable given how rarely this
+    /// view re-renders (only on data change) and how cheap `DateFormatter` is to instantiate.
     private var monthYearLabel: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM yyyy"
