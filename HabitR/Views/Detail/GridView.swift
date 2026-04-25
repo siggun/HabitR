@@ -210,14 +210,14 @@ struct GridView: View {
         for _ in 0..<weeksToShow {
             var column: [Date] = []
             for _ in 0..<7 {
-                week.append(cursor)
+                column.append(cursor)
                 guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else {
                     assertionFailure("Calendar failed to advance date")
                     return weeks
                 }
                 cursor = next
             }
-            columns.append(column)
+            weeks.append(column)
         }
         return weeks
     }
