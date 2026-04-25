@@ -46,6 +46,7 @@ struct GridView: View {
     /// Cell edge length. Chosen to feel comfortable when ~7 weeks fit on-screen at once.
     private let cellSize: CGFloat = 14
     private let cellSpacing: CGFloat = 3
+    private let labelWidth: CGFloat = 16
 
     /// Width reserved for the day-of-week label gutter on the left side.
     private let dayLabelWidth: CGFloat = 28
@@ -207,7 +208,7 @@ struct GridView: View {
         var cursor = gridStart
 
         for _ in 0..<weeksToShow {
-            var week: [Date] = []
+            var column: [Date] = []
             for _ in 0..<7 {
                 week.append(cursor)
                 guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else {
@@ -216,7 +217,7 @@ struct GridView: View {
                 }
                 cursor = next
             }
-            weeks.append(week)
+            columns.append(column)
         }
         return weeks
     }
