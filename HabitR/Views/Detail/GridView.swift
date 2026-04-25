@@ -52,24 +52,23 @@ struct GridView: View {
     private let dayLabelWidth: CGFloat = 28
 
     var body: some View {
-        HStack(alignment: .top, spacing: 6) {
-            dayLabelsColumn
-
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        monthHeaderRow
-                        gridRows
-                    }
-                    .padding(.vertical, 4)
-                    .id("gridContent")
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 4) {
+                    monthHeaderRow
+                    gridRows
                 }
-                .onAppear {
-                    proxy.scrollTo("gridContent", anchor: .trailing)
-                }
+                .padding(.vertical, 4)
+                .id("gridContent")
+            }
+            .onAppear {
+                proxy.scrollTo("gridContent", anchor: .trailing)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, dayLabelWidth + 6)
+        .overlay(alignment: .topLeading) {
+            dayLabelsColumn
+        }
         .padding(.horizontal)
     }
 
