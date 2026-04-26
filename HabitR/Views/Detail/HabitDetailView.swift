@@ -41,6 +41,7 @@ struct HabitDetailView: View {
                 VStack(spacing: 16) {
                     GridView(habit: habit)
                         .padding(.top, 4)
+                        .padding(.horizontal, -16)
 
                     actionRow(streak: streak)
 
