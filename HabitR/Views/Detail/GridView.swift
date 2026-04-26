@@ -51,24 +51,32 @@ struct GridView: View {
     /// Width reserved for the day-of-week label gutter on the left side.
     private let dayLabelWidth: CGFloat = 28
 
+    private let gridHeight: CGFloat = 144
+
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 4) {
-                    monthHeaderRow
-                    gridRows
+        GeometryReader { geo in
+            let scrollWidth = geo.size.width - dayLabelWidth - 6
+
+            HStack(alignment: .top, spacing: 6) {
+                dayLabelsColumn
+
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            monthHeaderRow
+                            gridRows
+                        }
+                        .padding(.vertical, 4)
+                        .id("gridContent")
+                    }
+                    .frame(width: scrollWidth)
+                    .onAppear {
+                        proxy.scrollTo("gridContent", anchor: .trailing)
+                    }
                 }
-                .padding(.vertical, 4)
-                .id("gridContent")
-            }
-            .onAppear {
-                proxy.scrollTo("gridContent", anchor: .trailing)
             }
         }
-        .padding(.leading, dayLabelWidth + 6)
-        .overlay(alignment: .topLeading) {
-            dayLabelsColumn
-        }
+        .frame(height: gridHeight)
         .padding(.horizontal)
     }
 
