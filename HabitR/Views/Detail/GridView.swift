@@ -77,7 +77,6 @@ struct GridView: View {
             }
         }
         .frame(height: gridHeight)
-        .padding(.horizontal)
     }
 
     // MARK: - Day Labels
