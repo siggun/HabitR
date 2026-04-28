@@ -5,13 +5,17 @@ import SwiftUI
 /// Blue palette used by every contribution grid in the app. Tuned to match the
 /// app's blue accent color and remain legible on the #1A1B1D dark background.
 extension Color {
-    /// Muted dark-blue tone for empty contribution-grid cells and the
-    /// background pill behind completed days in the calendar.
-    static let gridMuted = Color(red: 0.10, green: 0.16, blue: 0.28)
+    static let gridMuted = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.10, green: 0.16, blue: 0.28, alpha: 1)
+            : UIColor(red: 0.88, green: 0.91, blue: 0.96, alpha: 1)
+    })
 
-    /// Bright blue accent tone for completed cells, the streak flame, and
-    /// the small completion dot under calendar dates.
-    static let gridAccent = Color(red: 0.35, green: 0.55, blue: 1.00)
+    static let gridAccent = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.35, green: 0.55, blue: 1.00, alpha: 1)
+            : UIColor(red: 0.24, green: 0.47, blue: 0.96, alpha: 1)
+    })
 }
 
 /// Horizontal-scrolling 12-month contribution grid, GitHub-style.
