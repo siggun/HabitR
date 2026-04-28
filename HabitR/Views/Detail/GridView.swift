@@ -2,21 +2,16 @@ import SwiftUI
 
 // MARK: - Shared Grid Palette
 
-/// GitHub-style fixed green palette used by every contribution grid in the app.
-///
-/// Defined as a `Color` extension (rather than asset-catalog colors) so we don't have to touch
-/// the Xcode project to pick up new files. Tones are tuned for the app's #1A1B1D dark
-/// background — they remain legible without being so bright they distract from accent UI.
+/// Blue palette used by every contribution grid in the app. Tuned to match the
+/// app's blue accent color and remain legible on the #1A1B1D dark background.
 extension Color {
-    /// Muted dark-green tone. Two uses:
-    /// - Fill for empty contribution-grid cells (missed / future / pre-creation days).
-    /// - Background pill for completed days in the calendar (the date number reads on top).
-    static let gridMuted = Color(red: 0.10, green: 0.20, blue: 0.13)
+    /// Muted dark-blue tone for empty contribution-grid cells and the
+    /// background pill behind completed days in the calendar.
+    static let gridMuted = Color(red: 0.10, green: 0.16, blue: 0.28)
 
-    /// Bright green accent tone. Two uses:
-    /// - Fill for completed contribution-grid cells.
-    /// - Small completion dot below calendar dates and the streak-flame icon.
-    static let gridAccent = Color(red: 0.21, green: 0.83, blue: 0.45)
+    /// Bright blue accent tone for completed cells, the streak flame, and
+    /// the small completion dot under calendar dates.
+    static let gridAccent = Color(red: 0.35, green: 0.55, blue: 1.00)
 }
 
 /// Horizontal-scrolling 12-month contribution grid, GitHub-style.
@@ -128,6 +123,7 @@ struct GridView: View {
                             .font(.system(size: 10))
                             .foregroundStyle(.secondary)
                             .fixedSize()
+                            .offset(x: -2)
                     }
                 }
                 .frame(width: cellSize, height: monthHeaderHeight, alignment: .leading)

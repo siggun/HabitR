@@ -71,7 +71,6 @@ struct CalendarView: View {
         let isInDisplayedMonth = calendar.isDate(date, equalTo: displayedMonth, toGranularity: .month)
         let isToday = calendar.isDateInToday(date)
         let isFuture = date > calendar.startOfDay(for: Date())
-        let isBeforeCreation = date < calendar.startOfDay(for: habit.createdAt)
         let isCompleted = habit.isCompleted(for: date)
 
         Button {
@@ -111,7 +110,7 @@ struct CalendarView: View {
             .frame(height: 52)
         }
         .buttonStyle(.plain)
-        .disabled(isFuture || isBeforeCreation)
+        .disabled(isFuture)
     }
 
     // MARK: - Bottom Bar
