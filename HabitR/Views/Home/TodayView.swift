@@ -140,7 +140,6 @@ struct TodayView: View {
                     }
                     .onDrop(of: [UTType.text], delegate: HabitDropDelegate(
                         targetHabit: habit,
-                        allHabits: habits,
                         draggingHabit: $draggingHabit
                     ))
                     .contextMenu {
@@ -189,7 +188,6 @@ struct TodayView: View {
 
 private struct HabitDropDelegate: DropDelegate {
     let targetHabit: Habit
-    let allHabits: [Habit]
     @Binding var draggingHabit: Habit?
 
     func performDrop(info: DropInfo) -> Bool {
@@ -199,20 +197,13 @@ private struct HabitDropDelegate: DropDelegate {
 
     func dropEntered(info: DropInfo) {
         guard let dragging = draggingHabit,
-              dragging.id != targetHabit.id,
-              let fromIndex = allHabits.firstIndex(where: { $0.id == dragging.id }),
-              let toIndex = allHabits.firstIndex(where: { $0.id == targetHabit.id }),
-              fromIndex != toIndex
+              dragging.id != targetHabit.id
         else { return }
 
-        var reordered = Array(allHabits)
-        let moved = reordered.remove(at: fromIndex)
-        reordered.insert(moved, at: toIndex)
-
         withAnimation {
-            for (i, h) in reordered.enumerated() {
-                h.sortOrder = i
-            }
+            let temp = dragging.sortOrder
+            dragging.sortOrder = targetHabit.sortOrder
+            targetHabit.sortOrder = temp
         }
     }
 
