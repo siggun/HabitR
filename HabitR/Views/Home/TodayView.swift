@@ -37,6 +37,7 @@ struct TodayView: View {
     /// is dismissed (and this set back to `nil`) automatically when the user swipes down.
     @State private var selectedHabit: Habit?
     @State private var draggingHabit: Habit?
+    @State private var habitToDelete: Habit?
 
     var body: some View {
         NavigationStack {
@@ -82,9 +83,21 @@ struct TodayView: View {
             .sheet(isPresented: $showingPaywall) { PaywallView() }
             .sheet(isPresented: $showingSettings) { SettingsView() }
             .sheet(item: $selectedHabit) { habit in
-                // [Interview] No NavigationStack — the redesigned detail sheet renders its own
-                // header (icon + title + close X) and doesn't need a system nav bar.
                 HabitDetailView(habit: habit)
+            }
+            .alert("Delete Habit", isPresented: Binding(
+                get: { habitToDelete != nil },
+                set: { if !$0 { habitToDelete = nil } }
+            )) {
+                Button("Delete", role: .destructive) {
+                    if let habit = habitToDelete {
+                        viewModel.deleteHabit(habit, context: modelContext)
+                        habitToDelete = nil
+                    }
+                }
+                Button("Cancel", role: .cancel) { habitToDelete = nil }
+            } message: {
+                Text("Are you sure you want to delete \"\(habitToDelete?.name ?? "")\"? This action cannot be undone.")
             }
         }
     }
@@ -132,7 +145,7 @@ struct TodayView: View {
                     ))
                     .contextMenu {
                         Button(role: .destructive) {
-                            viewModel.deleteHabit(habit, context: modelContext)
+                            habitToDelete = habit
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
