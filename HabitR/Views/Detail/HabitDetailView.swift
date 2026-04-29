@@ -27,6 +27,7 @@ struct HabitDetailView: View {
     @StateObject private var viewModel = HabitListViewModel()
 
     @State private var showingEditSheet = false
+    @State private var showingDeleteConfirmation = false
 
     var body: some View {
         // [Interview] Compute the streak once per body evaluation. `currentStreak()` walks
@@ -58,6 +59,15 @@ struct HabitDetailView: View {
         .background(Color("AppBackground"))
         .sheet(isPresented: $showingEditSheet) {
             AddEditHabitView(habitToEdit: habit)
+        }
+        .alert("Delete Habit", isPresented: $showingDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                viewModel.deleteHabit(habit, context: modelContext)
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Are you sure you want to delete \"\(habit.name)\"? This action cannot be undone.")
         }
     }
 
@@ -139,7 +149,7 @@ struct HabitDetailView: View {
             // [Interview] Placeholder for future per-habit settings (notifications, archive,
             // delete, etc.). Wired to the same edit sheet for now so the button feels alive.
             iconButton(systemName: "gearshape", label: "Habit settings") {
-                showingEditSheet = true
+                showingDeleteConfirmation = true
             }
         }
     }
