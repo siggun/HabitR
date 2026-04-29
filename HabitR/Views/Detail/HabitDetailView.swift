@@ -28,6 +28,7 @@ struct HabitDetailView: View {
 
     @State private var showingEditSheet = false
     @State private var showingDeleteConfirmation = false
+    @State private var showingResetConfirmation = false
 
     var body: some View {
         // [Interview] Compute the streak once per body evaluation. `currentStreak()` walks
@@ -68,6 +69,14 @@ struct HabitDetailView: View {
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("Are you sure you want to delete \"\(habit.name)\"? This action cannot be undone.")
+        }
+        .alert("Reset Progress", isPresented: $showingResetConfirmation) {
+            Button("Reset", role: .destructive) {
+                viewModel.resetProgress(for: habit, context: modelContext)
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This will clear every logged completion for \"\(habit.name)\". The habit itself will remain. This action cannot be undone.")
         }
     }
 
@@ -146,11 +155,37 @@ struct HabitDetailView: View {
                 showingEditSheet = true
             }
 
-            // [Interview] Placeholder for future per-habit settings (notifications, archive,
-            // delete, etc.). Wired to the same edit sheet for now so the button feels alive.
-            iconButton(systemName: "gearshape", label: "Habit settings") {
-                showingDeleteConfirmation = true
+            Menu {
+                Button {
+                    showingEditSheet = true
+                } label: {
+                    Label("Edit Habit", systemImage: "square.and.pencil")
+                }
+
+                Button {
+                    showingResetConfirmation = true
+                } label: {
+                    Label("Reset Progress", systemImage: "arrow.counterclockwise")
+                }
+
+                Divider()
+
+                Button(role: .destructive) {
+                    showingDeleteConfirmation = true
+                } label: {
+                    Label("Delete Habit", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(.primary)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                    )
             }
+            .accessibilityLabel("Habit settings")
         }
     }
 

@@ -135,6 +135,17 @@ final class HabitListViewModel: ObservableObject {
         saveContext(context)
     }
 
+    /// Wipe every completion for a habit while keeping the habit itself. Used by the per-habit
+    /// settings menu's "Reset Progress" action so users can start fresh without re-creating the
+    /// habit (and losing its name, frequency, sort order, etc.).
+    func resetProgress(for habit: Habit, context: ModelContext) {
+        for completion in habit.completions {
+            context.delete(completion)
+        }
+        habit.completions.removeAll()
+        saveContext(context)
+    }
+
     // MARK: - Private
 
     /// Persist pending changes in the context.
