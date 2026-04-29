@@ -181,8 +181,12 @@ private struct HabitDropDelegate: DropDelegate {
     @Binding var draggingHabit: Habit?
 
     func performDrop(info: DropInfo) -> Bool {
-        draggingHabit = nil
+        withAnimation { draggingHabit = nil }
         return true
+    }
+
+    func dropExited(info: DropInfo) {
+        withAnimation { draggingHabit = nil }
     }
 
     func dropEntered(info: DropInfo) {
