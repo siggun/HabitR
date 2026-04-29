@@ -121,19 +121,9 @@ struct TodayView: View {
                     // Tap the card body to drill in; the completion button intercepts its own
                     // taps via its Button, so they don't bubble up to this gesture.
                     .onTapGesture { selectedHabit = habit }
-                    .opacity(draggingHabit?.id == habit.id ? 0.5 : 1.0)
                     .onDrag {
                         draggingHabit = habit
                         return NSItemProvider(object: habit.id.uuidString as NSString)
-                    } preview: {
-                        HStack(spacing: 8) {
-                            Image(systemName: habit.emoji)
-                            Text(habit.name).fontWeight(.semibold)
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color(.systemGray5)))
-                        .onDisappear { draggingHabit = nil }
                     }
                     .onDrop(of: [UTType.text], delegate: HabitDropDelegate(
                         targetHabit: habit,
