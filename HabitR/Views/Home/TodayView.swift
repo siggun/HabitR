@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 /// Root of the authenticated app surface — the home screen that users land on after onboarding.
 ///
@@ -35,6 +36,7 @@ struct TodayView: View {
     /// Non-nil when the user has tapped a card. Binding to `.sheet(item:)` ensures the sheet
     /// is dismissed (and this set back to `nil`) automatically when the user swipes down.
     @State private var selectedHabit: Habit?
+    @State private var draggingHabit: Habit?
 
     var body: some View {
         NavigationStack {
@@ -119,9 +121,17 @@ struct TodayView: View {
                     // Tap the card body to drill in; the completion button intercepts its own
                     // taps via its Button, so they don't bubble up to this gesture.
                     .onTapGesture { selectedHabit = habit }
+                    .opacity(draggingHabit?.id == habit.id ? 0.5 : 1.0)
+                    .onDrag {
+                        draggingHabit = habit
+                        return NSItemProvider(object: habit.id.uuidString as NSString)
+                    }
+                    .onDrop(of: [UTType.text], delegate: HabitDropDelegate(
+                        targetHabit: habit,
+                        allHabits: habits,
+                        draggingHabit: $draggingHabit
+                    ))
                     .contextMenu {
-                        // [Interview] Destructive role tints the button red and gives the
-                        // system the right affordance for haptic/preview behavior.
                         Button(role: .destructive) {
                             viewModel.deleteHabit(habit, context: modelContext)
                         } label: {
@@ -160,5 +170,41 @@ struct TodayView: View {
 
     private func decrementHabit(_ habit: Habit) {
         viewModel.decrementCounter(for: habit, on: Date(), context: modelContext)
+    }
+}
+
+// MARK: - Drag-to-Reorder
+
+private struct HabitDropDelegate: DropDelegate {
+    let targetHabit: Habit
+    let allHabits: [Habit]
+    @Binding var draggingHabit: Habit?
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggingHabit = nil
+        return true
+    }
+
+    func dropEntered(info: DropInfo) {
+        guard let dragging = draggingHabit,
+              dragging.id != targetHabit.id,
+              let fromIndex = allHabits.firstIndex(where: { $0.id == dragging.id }),
+              let toIndex = allHabits.firstIndex(where: { $0.id == targetHabit.id }),
+              fromIndex != toIndex
+        else { return }
+
+        var reordered = Array(allHabits)
+        let moved = reordered.remove(at: fromIndex)
+        reordered.insert(moved, at: toIndex)
+
+        withAnimation {
+            for (i, h) in reordered.enumerated() {
+                h.sortOrder = i
+            }
+        }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
     }
 }
