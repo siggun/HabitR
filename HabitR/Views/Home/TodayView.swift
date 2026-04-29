@@ -125,6 +125,15 @@ struct TodayView: View {
                     .onDrag {
                         draggingHabit = habit
                         return NSItemProvider(object: habit.id.uuidString as NSString)
+                    } preview: {
+                        HStack(spacing: 8) {
+                            Image(systemName: habit.emoji)
+                            Text(habit.name).fontWeight(.semibold)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color(.systemGray5)))
+                        .onDisappear { draggingHabit = nil }
                     }
                     .onDrop(of: [UTType.text], delegate: HabitDropDelegate(
                         targetHabit: habit,
@@ -181,12 +190,8 @@ private struct HabitDropDelegate: DropDelegate {
     @Binding var draggingHabit: Habit?
 
     func performDrop(info: DropInfo) -> Bool {
-        withAnimation { draggingHabit = nil }
+        draggingHabit = nil
         return true
-    }
-
-    func dropExited(info: DropInfo) {
-        withAnimation { draggingHabit = nil }
     }
 
     func dropEntered(info: DropInfo) {
